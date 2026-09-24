@@ -4,7 +4,7 @@ import { type GhExec, realGhExec } from '../../base/gh.js'
 import { defaultWorktreeRoot, findLive } from './loop-guard.js'
 
 /**
- * `repo-tooling loop reap` — the ai-issue-loop skill's Pass 2 stalled-agent
+ * `repo-tooling loop reap` — the ai-loop skill's Pass 2 stalled-agent
  * table, moved out of prose (#618). Nothing can time out an agent, so a label
  * that sat `STALE_MINUTES` past its last application (per the timeline) marks
  * a dead one:

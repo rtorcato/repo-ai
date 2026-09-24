@@ -75,7 +75,7 @@ const config: Config = {
 			logo: { alt: 'repo-ai', src: 'img/favicon.svg' },
 			items: [
 				{ to: '/docs', position: 'left', label: 'Docs' },
-				{ to: '/docs/ai-issue-loop', position: 'left', label: 'Guide' },
+				{ to: '/docs/ai-loop', position: 'left', label: 'Guide' },
 				{ to: '/docs/commands', position: 'left', label: 'Commands' },
 				{
 					type: 'dropdown',
@@ -98,7 +98,7 @@ const config: Config = {
 					title: 'Documentation',
 					items: [
 						{ label: 'Introduction', to: '/docs' },
-						{ label: 'The AI Issue Loop', to: '/docs/ai-issue-loop' },
+						{ label: 'The AI Loop', to: '/docs/ai-loop' },
 						{ label: 'Commands', to: '/docs/commands' },
 						{ label: 'Changelog', to: '/docs/changelog' },
 					],

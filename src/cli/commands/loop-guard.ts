@@ -7,7 +7,7 @@ import { type GhExec, realGhExec } from '../../base/gh.js'
 
 /**
  * `repo-tooling loop guard` — the most dangerous mechanics of the
- * ai-issue-loop skill, moved out of prose-with-shell into code a test can hold
+ * ai-loop skill, moved out of prose-with-shell into code a test can hold
  * (#519). Prose drifts and nothing fails when it does; PR #500 (a
  * `0 additions, 67703 deletions` commit) happened in exactly that gap.
  *

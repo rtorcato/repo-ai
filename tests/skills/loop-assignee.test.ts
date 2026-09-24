@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest'
  * declared — so every `--add-assignee @me` handed work back to the machine that
  * had just given up on it (#606). The human is named via `HUMAN_USER` instead.
  */
-const skills = ['ai-issue-loop', 'ai-workflow'].map((n) =>
+const skills = ['ai-loop', 'ai-workflow'].map((n) =>
 	join(import.meta.dirname, `../../skills/${n}/SKILL.md`)
 )
 
@@ -21,7 +21,7 @@ describe('ai loop skills never assign @me (#606)', () => {
 		expect(offenders).toEqual([])
 	})
 
-	it('ai-issue-loop resolves HUMAN_USER through `loop env`, humans only', () => {
+	it('ai-loop resolves HUMAN_USER through `loop env`, humans only', () => {
 		const skill = fs.readFileSync(skills[0], 'utf8')
 		// `loop env` owns the owner-type test now; loop-env.test.ts covers it.
 		expect(skill).toContain('eval "$(npx @rtorcato/repo-ai loop env)"')

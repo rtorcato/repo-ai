@@ -1,7 +1,7 @@
 {
 	"name": "@rtorcato/repo-ai",
 	"version": "0.1.0",
-	"description": "The ai-issue-loop pipeline — loop mechanics, Claude Code skills, and their audit — split out of @rtorcato/repo-tooling",
+	"description": "The ai-loop pipeline — loop mechanics, Claude Code skills, and their audit — split out of @rtorcato/repo-tooling",
 	"type": "module",
 	"bin": {
 		"repo-ai": "./dist/cli/index.js"

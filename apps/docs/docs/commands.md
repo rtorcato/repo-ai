@@ -44,6 +44,6 @@ The skills call these; you rarely need them directly.
 | Skill | Role |
 |---|---|
 | `/ai-workflow` | **Start here.** Bursts the `ai-ready` queue in parallel worktrees, then registers the loop to babysit the PRs. |
-| `/ai-issue-loop` | The engine: one stateless tick. `/ai-workflow` schedules it; invoke it directly only to force a tick. |
+| `/ai-loop` | The engine: one stateless tick. `/ai-workflow` schedules it; invoke it directly only to force a tick. |
 | `/ai-issue` | File an issue labelled `ai-ready` for the loop to pick up. |
 | `/ai-loop-status` | Read-only: what the loop is doing, and what is blocked. |

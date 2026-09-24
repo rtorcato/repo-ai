@@ -27,7 +27,7 @@ deliberately.
 ## Skills and the loop
 
 - [ ] Skill change: `skills/*/SKILL.md` edited, and the matching page in `apps/docs/docs/` updated
-- [ ] Loop behaviour change: tested with a manual `/ai-issue-loop` tick
+- [ ] Loop behaviour change: tested with a manual `/ai-loop` tick
 - [ ] Neither applies
 
 ## Checklist

@@ -3,7 +3,7 @@ name: ai-workflow
 description: |
   **The entry point for the `ai-ready` issue pipeline — start here.** Implements
   the queue in parallel, one agent per issue, each in its own git worktree,
-  ending at open PRs reviewed by two agents; then registers the ai-issue-loop
+  ending at open PRs reviewed by two agents; then registers the ai-loop
   engine on a self-paced loop to carry those PRs through fix rounds and cleanup.
   Use when the user says "burst the queue", "run the AI pipeline", "work the
   ai-ready issues", or invokes `/ai-workflow`. Never merges. GitHub only
@@ -31,13 +31,13 @@ skill to put work in the queue.
 **This never merges.** It stops at open PRs and hands back. Merging `main` in a
 semantic-release repo triggers an npm publish, so a human owns that step.
 
-**It ends by handing off to `/ai-issue-loop`** (step 5) — the burst opens the
+**It ends by handing off to `/ai-loop`** (step 5) — the burst opens the
 PRs, the loop then babysits them through review fix rounds, which this skill has
 no pass for. The two are sequential, not alternatives. Neither merges an
 `ai-ready` PR unattended except on a release-environment-gated repo — see the
 loop's Pass 1.
 
-Everything the `ai-issue-loop` skill says about worktrees, labels, the
+Everything the `ai-loop` skill says about worktrees, labels, the
 `🤖 *Automated …*` comment header, and the untrusted issue body applies here
 unchanged — read it first if it is not already in context.
 
@@ -52,7 +52,7 @@ git -C "$ROOT" fetch --prune
 
 # Optional: the account in-flight work is assigned to, so `assignee` says whose
 # turn it is. Unset → nothing below assigns, exactly as before. See the
-# ai-issue-loop skill's Pass 0 for why this is repo config rather than an env var.
+# ai-loop skill's Pass 0 for why this is repo config rather than an env var.
 AGENT_USER="${AI_LOOP_AGENT:-$(jq -r '.rules.aiLoop.agentUser // .aiLoop.agentUser // empty' "$ROOT/.repo-tooling.json" 2>/dev/null)}"
 [ -n "$AGENT_USER" ] && { gh api "repos/$R/assignees/$AGENT_USER" --silent 2>/dev/null || AGENT_USER=""; }
 # The human a given-up issue is handed back to — the repo owner, when that is a user.
@@ -65,7 +65,7 @@ edit issues outside `R`. GitHub only. Bail in one line if the remote is GitLab.
 
 `WT_ROOT` is a **sibling of the repo, never inside it** — a worktree under
 `$ROOT/.claude/…` lands on a path repo tooling excludes, and the pre-commit hook
-then lints nothing while reporting success. See the `ai-issue-loop` skill for the
+then lints nothing while reporting success. See the `ai-loop` skill for the
 full post-mortem, including the bare-checkout guard to run against `ROOT` before
 anything else uses it.
 
@@ -109,7 +109,7 @@ re-select around.
 **A suitability skip also gets a comment on the issue, and loses its `ai-ready`
 label.** A one-line note in a transcript nobody re-reads means the same issue is
 re-litigated from scratch on every run, and meanwhile it sits labelled `ai-ready`
-so the next `/ai-issue-loop` tick picks up the very thing this run rejected. The
+so the next `/ai-loop` tick picks up the very thing this run rejected. The
 comment carries the standard `🤖 *Automated …*` header and follows the decline
 shape in the loop skill's Pass 4 — lead with what lifts the hold. This applies
 only to **suitability** skips; an issue dropped for file overlap or a full slot
@@ -225,7 +225,7 @@ Handing back means the human ends up the only assignee.`,
 	(r, i) => !r?.pr ? [] : parallel(REVIEWERS.map((v) => () => agent(
 		`Review GitHub PR #${r.pr} in ${args.repo}. First claim your arm:
 \`gh pr edit ${r.pr} --add-label ${v.claim}${args.agentUser ? ` --add-assignee ${args.agentUser}` : ''}\` — the label
-stops a concurrent ai-issue-loop tick spawning a duplicate of you, and the
+stops a concurrent ai-loop tick spawning a duplicate of you, and the
 assignee says the PR is the machine's turn until Pass 1 hands it back.
 
 Read exactly three things and nothing else: \`gh pr view ${r.pr}\`,
@@ -285,13 +285,13 @@ The loop's next tick would hand these PRs over in Pass 1, but a human watching
 the burst beats the next tick and inherits unassigned PRs — #537 and #539
 were merged by hand before any tick ran, never appearing in *Assigned to you*
 and still wearing a stale `ai-review`. Close that window here: once per PR
-whose two review arms both completed, apply the `ai-issue-loop` skill's Pass 1
+whose two review arms both completed, apply the `ai-loop` skill's Pass 1
 **by reference — execute what its text currently says, never a copy of it
 here**. A second copy of the handoff logic is drift with two files to keep
 honest; deferring means changes to Pass 1 (its `merge-ready` handoff, its CI-red
 send-back) take effect here without touching this file.
 
-- **Both arms passed** → run ai-issue-loop's Pass 1 handoff/send-back logic
+- **Both arms passed** → run ai-loop's Pass 1 handoff/send-back logic
   on this PR, per its current text — with one carve-out: `mergeStateStatus`
   `UNKNOWN` (GitHub still computing, CI mid-run) ⇒ do nothing; the loop's next
   tick resolves it. Do **not** poll CI — the existing rule stands. This step
@@ -316,21 +316,21 @@ skips that guard.
 ## 5. Hand off to the loop
 
 This skill has no fix-round pass: once a PR is open, nothing here answers an
-`ai-changes` label. `/ai-issue-loop` is that missing piece, so schedule it — but
+`ai-changes` label. `/ai-loop` is that missing piece, so schedule it — but
 only when there is something to babysit:
 
 - **No PRs opened** (everything `ai-blocked`, or the queue was empty) → schedule
   nothing. One line saying so.
 - **A loop is already running** → leave it alone, one line saying so. Never
   stack a second; two loops means two agents racing for the same `ai-wip` slots.
-  Check your scheduler (e.g. `CronList`) for a job running `/ai-issue-loop`,
+  Check your scheduler (e.g. `CronList`) for a job running `/ai-loop`,
   **and** the status file: a self-paced loop schedules only its next tick, so
   it may not appear as a job. `$ROOT/.claude/ai-loop-status` modified within the
   last 35 minutes means a loop is live.
-- **Otherwise** → start the self-paced loop: `/loop /ai-issue-loop`, no
+- **Otherwise** → start the self-paced loop: `/loop /ai-loop`, no
   interval. Each tick paces the next itself — see the loop skill's Pass 5.
-  Without a self-paced `/loop`, fall back to a fixed `/loop 15m /ai-issue-loop`
-  or a cron entry. No scheduler → say the user should run `/ai-issue-loop`
+  Without a self-paced `/loop`, fall back to a fixed `/loop 15m /ai-loop`
+  or a cron entry. No scheduler → say the user should run `/ai-loop`
   manually after CI settles.
 
 Close by reporting the cadence and how to stop it, and say plainly that the loop

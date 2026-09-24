@@ -7,7 +7,7 @@ description: What repo-ai is, what it ships, and where to start.
 
 # repo-ai
 
-`@rtorcato/repo-ai` is the **ai-issue-loop** pipeline: a label-driven loop that
+`@rtorcato/repo-ai` is the **ai-loop** pipeline: a label-driven loop that
 takes an `ai-ready` GitHub issue, implements it in its own git worktree, opens a
 PR, has two agents review it, and hands it to a human to merge.
 
@@ -24,7 +24,7 @@ repo-side standard the loop relies on — branch protection, auto-merge, and the
 
 ## What it ships
 
-- **Claude Code skills** — `ai-workflow` (the entry point), `ai-issue-loop` (the
+- **Claude Code skills** — `ai-workflow` (the entry point), `ai-loop` (the
   engine), `ai-issue` (the on-ramp), and `ai-loop-status` (a read-only view).
 - **`loop` commands** — the mechanics the skills call, as tested code:
   `loop tick`, `loop guard`, `loop worktree add`, `loop reap`, and more.
@@ -36,8 +36,8 @@ Every command takes `--json`.
 ## Start here
 
 1. Run `npx @rtorcato/repo-ai setup` — skills, labels, agent identity and statusline, asking before each.
-2. Check the repo meets the [prerequisites](./ai-issue-loop.md#repo-prerequisites).
+2. Check the repo meets the [prerequisites](./ai-loop.md#repo-prerequisites).
 3. File an issue with `/ai-issue`, then run `/ai-workflow` in Claude Code.
 
-Read [The AI Issue Loop](./ai-issue-loop.md) for how the pipeline works, and
+Read [The AI Loop](./ai-loop.md) for how the pipeline works, and
 [Commands](./commands.md) for every command.

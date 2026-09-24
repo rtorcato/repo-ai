@@ -5,7 +5,7 @@ import { type GitExec, realGitExec } from '../../base/git.js'
 import { defaultWorktreeRoot } from './loop-guard.js'
 
 /**
- * `repo-tooling loop worktree add` — the ai-issue-loop skill's Pass 4
+ * `repo-tooling loop worktree add` — the ai-loop skill's Pass 4
  * worktree creation, moved into code (#616): `git worktree add`, linking every
  * `worktree.symlinkDirectories` entry, the `.git/info/exclude` line, and the
  * assertion that nothing was left unlinked.

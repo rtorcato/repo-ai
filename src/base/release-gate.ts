@@ -161,7 +161,7 @@ async function readEnvironments(gh: GhExec, nwo: string): Promise<Environments |
 }
 
 /**
- * The ai-issue-loop's unattended-merge probe (#620): true only when the job
+ * The ai-loop's unattended-merge probe (#620): true only when the job
  * that publishes runs behind an environment carrying `required_reviewers`, so a
  * human still stands between a merge and the registry. An environment no job
  * references gates nothing, and every unreadable answer fails closed.

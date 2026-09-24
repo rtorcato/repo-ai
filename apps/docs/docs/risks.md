@@ -19,7 +19,7 @@ Claude plan's usage limits. CI runs on the PRs it opens spend your GitHub
 Actions minutes.
 
 **The loop's limits are best-effort, not a spending guarantee.** The
-[limits](./ai-issue-loop.md#limits) (issues in flight, fix rounds, agents per
+[limits](./ai-loop.md#limits) (issues in flight, fix rounds, agents per
 tick) are instructions an agent follows, not caps enforced outside the agent;
 enforcing them in the Workflow scripts is tracked in
 [#41](https://github.com/rtorcato/repo-ai/issues/41). A misbehaving agent, a

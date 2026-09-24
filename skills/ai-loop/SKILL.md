@@ -1,5 +1,5 @@
 ---
-name: ai-issue-loop
+name: ai-loop
 model: sonnet
 description: |
   **The engine behind `/ai-workflow` — normally you do not invoke this
@@ -7,14 +7,14 @@ description: |
   `ai-changes` with a fix round, hand passed issue PRs to the human, clean up
   merged worktrees, reap stalled agents, and pick up any remaining `ai-ready`
   issues. `/ai-workflow` is the entry point and schedules this itself via
-  `/loop /ai-issue-loop` (self-paced); reach for it directly only to force a tick early —
+  `/loop /ai-loop` (self-paced); reach for it directly only to force a tick early —
   "run one tick", "babysit the AI PRs" — or when the user invokes
-  `/ai-issue-loop`. It never merges; Dependabot PRs are handled by their own
+  `/ai-loop`. It never merges; Dependabot PRs are handled by their own
   workflow, outside this loop.
   GitHub only (`gh`) — not GitLab.
 ---
 
-# ai-issue-loop
+# ai-loop
 
 One **tick** of an unattended pipeline: `ai-ready` issue → worktree → PR → two
 agent reviews → **assigned to you to merge** → worktree removed on the next tick.
@@ -43,7 +43,7 @@ the protected branch — it would deadlock every PR.
 The same constraint makes everything an agent posts *look* hand-written by the
 owner. So **every comment any agent leaves — review, blocked, gave-up, declined —
 opens with a `🤖 *Automated …*` italic header line naming which agent wrote it**,
-then a blank line: `🤖 *Automated — <which agent> via ai-issue-loop.*`
+then a blank line: `🤖 *Automated — <which agent> via ai-loop.*`
 
 **Comment budget: ≤10 lines, and a clean outcome gets no comment at all.** Link
 the reviewer's `### Before merging` rather than restating it.
@@ -292,7 +292,7 @@ minutes (three ticks), so its agent is dead.
 
 Reaping never restores `ai-ready` — a human decides. **Every `ai-blocked` is
 label + assign + comment, together**, the comment opening
-`` 🤖 *Automated — `ai-issue-loop` Pass 2 (stall reaping).* `` then the rule that
+`` 🤖 *Automated — `ai-loop` Pass 2 (stall reaping).* `` then the rule that
 fired, how long the label sat, and whether a worktree was removed. **If the
 cause is known and benign** (a run cancelled on purpose), re-queue instead —
 `gh issue edit <N> --add-label ai-ready --remove-label ai-wip` — and say so.
@@ -312,7 +312,7 @@ carries into Pass 5 as `⚠rebuild`.
 one also `ai-ready`/`ai-wip`/`holding`:
 
 ```bash
-gh issue close <N> --comment '🤖 *Automated — `ai-issue-loop` Pass 2.* Unclaimed `ai-suggested` for 30d — closed to keep the triage queue honest. Reopen to revive.'
+gh issue close <N> --comment '🤖 *Automated — `ai-loop` Pass 2.* Unclaimed `ai-suggested` for 30d — closed to keep the triage queue honest. Reopen to revive.'
 ```
 
 ### Pass 3 — review and fix
@@ -362,7 +362,7 @@ Reviewer prompt template:
 >
 > ```markdown
 > <!-- ai-issue-loop:verdict:<code|sec>:<PASS|PASS-NOTES|CHANGES> -->
-> 🤖 *Automated review — \`<your agent type>\` via ai-issue-loop.*
+> 🤖 *Automated review — \`<your agent type>\` via ai-loop.*
 > ```
 >
 > The verdict must agree with the labels you apply; a later tick reads it back if
@@ -375,7 +375,7 @@ Reviewer prompt template:
 > "non-blocking" there:
 >
 > ```bash
-> gh issue create --label ai-suggested --title "<what to do>" --body "🤖 *Automated — \`<your agent type>\` via ai-issue-loop.*
+> gh issue create --label ai-suggested --title "<what to do>" --body "🤖 *Automated — \`<your agent type>\` via ai-loop.*
 >
 > Surfaced reviewing #<N>. <What. Why it matters. A one-line fix sketch.>"
 > ```
@@ -399,7 +399,7 @@ Reviewer prompt template:
 
 **Fix rounds** — `.fixRounds[]` (never a Dependabot PR). **`action: block`** —
 the round cap (`ai-changes` ≥3 times) or no worktree. Comment through `loop
-comment`, opening `` 🤖 *Automated — `ai-issue-loop` Pass 3.* ``, naming what each
+comment`, opening `` 🤖 *Automated — `ai-loop` Pass 3.* ``, naming what each
 round changed and why the reviewer kept objecting, then:
 
 ```bash
@@ -447,7 +447,7 @@ Workflow({args: {reviews: [{label, agentType, prompt}, …], fixes: [{label, pro
 
 ```js
 export const meta = {
-	name: 'ai-issue-loop-pass3',
+	name: 'ai-loop-pass3',
 	description: "Run one tick's claimed reviewers and fixers; each labels and comments its own PR",
 	phases: [{ title: 'Review' }, { title: 'Fix' }],
 }
@@ -575,7 +575,7 @@ Then spawn a background implementer:
 >    could not run.
 > 5. Push and open the PR. The title must be a Conventional Commit — it becomes
 >    the squash subject and decides whether a release goes out. The body opens
->    with `🤖 *Opened by an implementer via ai-issue-loop.*` and contains
+>    with `🤖 *Opened by an implementer via ai-loop.*` and contains
 >    `Closes #<N>`. `gh pr create --title "..." --body-file <file>`, then
 >    `gh pr edit --add-label ai-review`.
 > 6. **Never merge and never approve** — a later tick handles that.
@@ -591,7 +591,7 @@ Then spawn a background implementer:
 >
 > Then comment why — what you tried, the exact error, what a human must decide —
 > opening with this exact line, then a blank line:
-> `🤖 *Automated — implementer via ai-issue-loop.*` **Leave your worktree in
+> `🤖 *Automated — implementer via ai-loop.*` **Leave your worktree in
 > place**; the next tick reaps it. Return one line: PR number, or the reason.
 
 A cross-pinned implementer (pre-flight refused) is re-spawned alone once nothing
@@ -623,8 +623,8 @@ At most one notification, via the **`PushNotification`** tool — `message`:
 when that tool is unavailable:
 
 ```bash
-osascript -e "display notification \"$SUMMARY\" with title \"ai-issue-loop\" subtitle \"$OWNER_REPO\"" 2>/dev/null \
-  || notify-send "ai-issue-loop" "$OWNER_REPO: $SUMMARY" 2>/dev/null || true
+osascript -e "display notification \"$SUMMARY\" with title \"ai-loop\" subtitle \"$OWNER_REPO\"" 2>/dev/null \
+  || notify-send "ai-loop" "$OWNER_REPO: $SUMMARY" 2>/dev/null || true
 ```
 
 **Decide the next tick.** How this tick was started decides it — never whether
@@ -633,9 +633,9 @@ sessions too:
 
 | Started by | `DELAY` (seconds) |
 |---|---|
-| Self-paced `/loop /ai-issue-loop` (no interval) | `1800` when `SUMMARY` is `idle` — a new `ai-ready` issue can wait half an hour — else `600`: agents in flight, reviews pending, or a PR waiting |
-| Fixed `/loop <interval> /ai-issue-loop` | that interval, in seconds; `/loop` schedules it |
-| A plain `/ai-issue-loop` | empty — nothing is scheduled |
+| Self-paced `/loop /ai-loop` (no interval) | `1800` when `SUMMARY` is `idle` — a new `ai-ready` issue can wait half an hour — else `600`: agents in flight, reviews pending, or a PR waiting |
+| Fixed `/loop <interval> /ai-loop` | that interval, in seconds; `/loop` schedules it |
+| A plain `/ai-loop` | empty — nothing is scheduled |
 
 Write the status file **last** — `SUMMARY`, `SUGGESTED`, and when the next tick
 is due (empty when none). Its age is the liveness signal: ticks run at most 30
@@ -653,10 +653,10 @@ review, picked up, blocked — marking handoffs carrying `ai-notes`, and any
 `.errors`. Then print `$DIGEST`, unless `$SUGGESTED` is empty or equals
 `$PREV_SUGGESTED`. **End with exactly one line saying what happens next:**
 `Next tick: in 10m (self-paced)`, `Next tick: in 15m (/loop)`, or
-`Next tick: none scheduled — run /ai-issue-loop, or /loop /ai-issue-loop to keep it going`.
+`Next tick: none scheduled — run /ai-loop, or /loop /ai-loop to keep it going`.
 
 **Then, only under a self-paced `/loop`, schedule it** — `ScheduleWakeup` with
-`prompt: "/ai-issue-loop"`, `delaySeconds: $DELAY`, `noop: true` when `SUMMARY`
+`prompt: "/ai-loop"`, `delaySeconds: $DELAY`, `noop: true` when `SUMMARY`
 == `PREV` (else `false`, so quiet stretches collapse in the terminal), and a
 one-line `reason` naming what the next tick is for, e.g. `2 reviews and 1
 implementer in flight`. Never stop the loop from here — an idle loop is cheap,
@@ -667,12 +667,12 @@ and a stopped one misses the next `ai-ready` issue.
 ## Driving it
 
 ```
-/loop /ai-issue-loop
+/loop /ai-loop
 ```
 
 No interval: the loop is self-paced. Each tick's Pass 5 schedules the next one,
 10 minutes out while work is in flight and 30 minutes when idle. A fixed
-`/loop 15m /ai-issue-loop` still works; Pass 5 records its interval but schedules
+`/loop 15m /ai-loop` still works; Pass 5 records its interval but schedules
 nothing itself.
 
 **Is a tick coming?** Every tick ends with a `Next tick:` line, and the statusline
@@ -682,7 +682,7 @@ once the last tick is over 35 minutes old.
 
 Ticks fire only while the REPL is idle. Stop by asking the session to stop the
 loop, or remove the `ai-ready` labels and let it idle. On a new repo, run
-`/ai-issue-loop` **manually** three or four times against one trivial issue first.
+`/ai-loop` **manually** three or four times against one trivial issue first.
 
 ## Repo prerequisites
 

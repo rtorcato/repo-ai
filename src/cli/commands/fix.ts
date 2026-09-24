@@ -35,8 +35,7 @@ export interface Fixer {
 
 export const FIXERS = {
 	labels: {
-		description:
-			'Repair ai-issue-loop label colours and descriptions on GitHub via `gh label edit`',
+		description: 'Repair ai-loop label colours and descriptions on GitHub via `gh label edit`',
 		run: (dir) => applyLoopLabels(dir),
 	},
 	'claude-skills': {

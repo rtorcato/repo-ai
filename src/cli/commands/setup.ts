@@ -78,7 +78,7 @@ export async function runSetup(
 
 // `fix labels` only repairs; here the step also creates the set.
 const PROMPTS: Record<string, string> = {
-	labels: 'Create or repair the ai-issue-loop labels on GitHub via `gh label`',
+	labels: 'Create or repair the ai-loop labels on GitHub via `gh label`',
 }
 
 async function askToRun(target: string): Promise<boolean> {

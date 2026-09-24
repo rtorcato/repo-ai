@@ -118,7 +118,7 @@ npx @rtorcato/repo-ai loop tick --json   # one tick's work list; writes no GitHu
 	},
 ]
 
-const GUIDE = '/docs/ai-issue-loop'
+const GUIDE = '/docs/ai-loop'
 
 const PARTS: { name: string; desc: string; chips: string[]; href: string }[] = [
 	{
@@ -136,7 +136,7 @@ const PARTS: { name: string; desc: string; chips: string[]; href: string }[] = [
 	{
 		name: 'Claude Code skills',
 		desc: 'The entry point, the engine, the issue on-ramp, and a read-only status view — installed into ~/.claude/skills.',
-		chips: ['ai-workflow', 'ai-issue-loop', 'ai-issue', 'ai-loop-status'],
+		chips: ['ai-workflow', 'ai-loop', 'ai-issue', 'ai-loop-status'],
 		href: '/docs/commands',
 	},
 	{

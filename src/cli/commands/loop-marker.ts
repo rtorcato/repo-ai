@@ -4,7 +4,7 @@ import { type GhExec, realGhExec } from '../../base/gh.js'
 import { ghOut } from './loop-env.js'
 
 /**
- * `repo-tooling loop comment` and `loop verdict` — the ai-issue-loop skill's
+ * `repo-tooling loop comment` and `loop verdict` — the ai-loop skill's
  * two hidden-marker protocols, moved out of prose-with-jq (#619):
  *
  * - **comment** upserts the one `<!-- ai-issue-loop:decision -->` comment on a
@@ -20,6 +20,7 @@ import { ghOut } from './loop-env.js'
  * ownership. Bodies travel to gh as JSON on stdin, never through a shell.
  */
 
+// Pre-rename skill name kept on purpose: in-flight PR comments carry these markers.
 export const DECISION_MARKER = '<!-- ai-issue-loop:decision -->'
 
 export type Verdict = 'PASS' | 'PASS-NOTES' | 'CHANGES'
