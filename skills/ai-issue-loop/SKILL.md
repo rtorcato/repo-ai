@@ -119,8 +119,8 @@ PR: ai-review ─> ai-reviewing-* ─┬─> ai-ok-code + ai-ok-sec ──> merg
                                      └─ Pass 1 sends back: not CLEAN, or a required check FAILED
 ```
 
-`ai-reviewing-*` and `ai-fixing` are *claims*, applied right before the spawn and
-cleared by the agent; one outliving its agent is reaped in Pass 2.
+`ai-reviewing-*` and `ai-fixing` are *claims*, applied as each task is queued for
+Pass 3's Workflow and cleared by the agent; one outliving its agent is reaped in Pass 2.
 
 ## Limits — do not exceed (the loop runs unattended against a monthly cap)
 
@@ -128,6 +128,7 @@ cleared by the agent; one outliving its agent is reaped in Pass 2.
 - **Reviewers see the diff only** — `gh pr view` + `gh pr diff` + the issue body.
   No repo-wide exploration, no Explore agents.
 - **2 fix rounds per PR.** On the 3rd `ai-changes`, stop and mark `ai-blocked`.
+- **8 review and fix agents per tick**, in one Workflow; the rest wait for the next tick.
 - **An idle tick spawns zero agents.** Skip to Pass 5 and say one line.
 
 ---
@@ -322,17 +323,21 @@ current head. `<claim>`/`<pass>` are `ai-reviewing-<arm>`/`ai-ok-<arm>`:
 - **`PASS-NOTES`** — the same, plus `--add-label ai-notes`
 - **`CHANGES`** — `gh pr edit <N> --add-label ai-changes --remove-label ai-review --remove-label <claim>`
 
-**Spawn the missing reviewers** — `.reviewsToSpawn[]`. **Claim first,
-immediately before the spawn**, or a tick landing mid-review duplicates it:
+**Queue the missing reviewers** — `.reviewsToSpawn[]`. **Claim each as you
+queue it**, and only within the tick's 8-task cap, or a tick landing mid-review
+duplicates it:
 
 ```bash
 gh pr edit <N> --add-label ai-reviewing-code ${AGENT_USER:+--add-assignee} ${AGENT_USER:+"$AGENT_USER"}   # then spawn code-reviewer
 gh pr edit <N> --add-label ai-reviewing-sec  ${AGENT_USER:+--add-assignee} ${AGENT_USER:+"$AGENT_USER"}   # then spawn security-expert
 ```
 
-Spawn in background; both arms may launch in one message. Use `code-reviewer` /
-`security-expert` as `subagent_type` when listed, else `general-purpose` — never
-skip a review over a missing type (#611).
+Don't spawn it yet: each claimed arm becomes one **review task** for this tick's
+Workflow ([below](#launch-the-ticks-workflow)) — `{label: "code:#<N>", agentType,
+prompt}`, the prompt being the template below with `<N>`, `<M>` and
+`<OWNER_REPO>` substituted. `agentType` is `code-reviewer` / `security-expert`
+when listed, else `general-purpose` — never skip a review over a missing type
+(#611).
 
 Reviewer prompt template:
 
@@ -387,8 +392,8 @@ Reviewer prompt template:
 >
 > **A question only a human can answer is a pass + `ai-notes`, never
 > `ai-changes`** — an agent would guess and burn both fix rounds. Use
-> `ai-changes` only for a concrete change an agent could make. Reply with one
-> line; do not restate your verdict.
+> `ai-changes` only for a concrete change an agent could make. Return the
+> verdict you posted and one line of summary.
 
 **Fix rounds** — `.fixRounds[]` (never a Dependabot PR). **`action: block`** —
 the round cap (`ai-changes` ≥3 times) or no worktree. Comment through `loop
@@ -409,7 +414,8 @@ human. **`action: spawn`** — claim first, or a second fixer races the first:
 gh pr edit <N> --add-label ai-fixing ${AGENT_USER:+--add-assignee} ${AGENT_USER:+"$AGENT_USER"}   # then spawn the implementer
 ```
 
-Then spawn one background implementer, substituting `.worktree`:
+Then add one **fix task** for this tick's Workflow — `{label: "fix:#<N>",
+prompt}`, substituting `.worktree` into:
 
 > Address review feedback on PR #`<N>` in `<OWNER_REPO>`. Work via
 > `git -C "<worktree>"` and absolute paths under that directory for every
@@ -423,6 +429,66 @@ Then spawn one background implementer, substituting `.worktree`:
 > with a Conventional Commit, and push. Then:
 > `gh pr edit <N> --add-label ai-review --remove-label ai-changes --remove-label ai-fixing --remove-label ai-ok-code --remove-label ai-ok-sec --remove-label ai-notes --remove-label merge-ready`
 > (the diff changed, so every review label is stale). Never merge, never approve.
+> Return whether you pushed, and one line of summary.
+
+#### Launch the tick's Workflow
+
+Every review and fix task this tick goes into **one** `Workflow` call — none
+when there are no tasks, so an idle tick still spawns zero agents. **At most 8
+tasks per tick**, fixes first: stop claiming at 8, and leave the rest
+unclaimed for the next tick, which lists them again. A claim with no task behind
+it would sit until `loop reap` times it out.
+
+```
+Workflow({args: {reviews: [{label, agentType, prompt}, …], fixes: [{label, prompt}, …]}, script: …})
+```
+
+```js
+export const meta = {
+	name: 'ai-issue-loop-pass3',
+	description: "Run one tick's claimed reviewers and fixers; each labels and comments its own PR",
+	phases: [{ title: 'Review' }, { title: 'Fix' }],
+}
+
+const VERDICT = {
+	type: 'object',
+	properties: {
+		verdict: { enum: ['PASS', 'PASS-NOTES', 'CHANGES'] },
+		summary: { type: 'string' },
+	},
+	required: ['verdict', 'summary'],
+}
+const FIXED = {
+	type: 'object',
+	properties: { pushed: { type: 'boolean' }, summary: { type: 'string' } },
+	required: ['pushed', 'summary'],
+}
+
+const tasks = [
+	...args.fixes.map((f) => () => agent(f.prompt, { label: f.label, phase: 'Fix', schema: FIXED })),
+	...args.reviews.map((r) => () =>
+		agent(r.prompt, { label: r.label, phase: 'Review', schema: VERDICT, agentType: r.agentType })
+	),
+]
+const results = await parallel(tasks)
+const labels = [...args.fixes, ...args.reviews].map((t) => t.label)
+return labels.map((label, i) => ({ label, result: results[i] }))
+```
+
+Launch it and **do not wait** — go on to Pass 4. Notes, so it doesn't get
+"tidied" into breakage:
+
+- **The agents still write the state.** Each reviewer posts its verdict marker
+  and applies its labels; each fixer pushes and relabels. The Workflow's typed
+  result is a report, never the record: the session that launched it may be
+  gone before it finishes, and the next tick reads only labels and markers.
+- **No retries, no `isolation`.** One agent per claim, so `loop reap`'s
+  45-minute rule still describes every claim. Fixers work in the `ai-*`
+  worktree named in their prompt, through `git -C`, never `EnterWorktree`.
+- **When the completion notification arrives**, print one line per task
+  (`code:#58 PASS`, `fix:#61 pushed`) and act on nothing. A `null` result is an
+  agent that died: its claim stays until the next tick adopts a posted verdict
+  or `loop reap` clears it.
 
 ### Pass 4 — pick up
 
@@ -482,7 +548,7 @@ one sanctioned rebuild.
 
 **No implementer ever calls `EnterWorktree` — in any form**; it relocates this
 session too. **Spawn implementers one at a time — never two in one message** —
-concurrent spawns cross-pin. Reviewers may still launch together.
+concurrent spawns cross-pin. (Reviewers and fixers run inside Pass 3's Workflow instead.)
 
 Then spawn a background implementer:
 

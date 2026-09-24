@@ -178,8 +178,8 @@ PR: ai-review ─> ai-reviewing-* ─┬─> ai-ok-code + ai-ok-sec ─┬─ is
 ```
 
 `ai-reviewing-code` / `ai-reviewing-sec` / `ai-fixing` are the claim step. Pass 3
-applies one immediately before spawning that agent and skips spawning a second
-while it is set, so a tick that fires mid-run cannot double-spawn; the agent
+applies one as it queues that agent for the tick's Workflow and skips queueing a
+second while it is set, so a tick that fires mid-run cannot double-spawn; the agent
 clears its own claim alongside the label it ends on — a verdict for a reviewer,
 `ai-review` for the fix round. A duplicated fix round is the worse of the two:
 both implementers share one worktree and one branch, so they race each other's
@@ -234,7 +234,7 @@ Passes run cheapest first, so a quiet repo exits fast.
 | **0 — orient** | Resolve the main checkout, fetch, list open PRs and `ai-wip` issues. Adopt unlabelled PRs — Dependabot's, and any the loop's own identity opened with the `🤖` header. Bail to Pass 5 with `idle` only if there is nothing at all: no labelled PR, no eligible issue, and no leftover worktree. |
 | **1 — merge** | Auto-merge only *Dependabot* PRs that passed both reviews. Hand every other ready PR to you as `merge-ready`, dropping `ai-review` and both `ai-ok-*`. Send back anything GitHub reports as not `CLEAN`, or with a required check red. |
 | **2 — clean up** | Remove worktrees whose PR merged (confirming the squash is on `main` first), then reap stalls. |
-| **3 — review** | Spawn the missing reviewers for `ai-review` PRs; dispatch a fix round for `ai-changes`. |
+| **3 — review** | Queue the missing reviewers for `ai-review` PRs and a fix round for each `ai-changes` PR, then run them all in one Workflow (at most 8 agents) with typed verdicts. The agents still write the labels and verdict markers. |
 | **4 — pick up** | Claim eligible `ai-ready` issues, create the worktree, spawn an implementer. |
 | **5 — report** | One-line summary, notify only when it changed. Never skipped, including on an idle tick. |
 
@@ -264,6 +264,8 @@ These exist because the loop runs unattended against a monthly usage cap.
   No repo-wide exploration.
 - **2 fix rounds per PR.** On the third `ai-changes`, stop and mark
   `ai-blocked`. Reviewer↔implementer ping-pong is the one unbounded token sink.
+- **8 review and fix agents per tick**, in one Workflow; the rest wait for the
+  next tick.
 - **An idle tick spawns zero agents.**
 - **Stall reaping instead of timeouts.** Nothing can time an agent out from
   outside, so a label that has sat 45 minutes without its expected transition is
