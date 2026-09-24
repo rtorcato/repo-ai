@@ -61,6 +61,37 @@ format can also take it straight from GitHub:
 npx skills add https://github.com/rtorcato/repo-ai --skill ai-loop
 ```
 
+## Configuration
+
+Per-repo settings live in `.repo-ai.json` at the repo root. Every key is
+optional:
+
+```json
+{
+  "$schema": "https://rtorcato.github.io/repo-ai/repo-ai.json",
+  "agentUser": "my-bot",
+  "requiredSkills": ["ai-loop"]
+}
+```
+
+| Key | Type | Default | Read by |
+|---|---|---|---|
+| `$schema` | string | none | Your editor, for completion and validation. `fix config` and `setup` write it. |
+| `agentUser` | string | none: the loop runs as whoever `gh` is signed in as | `loop guard`, which halts a tick running as anyone else; `loop env`; `fix ai-loop-identity`; `doctor`. |
+| `requiredSkills` | string[] | `[]`: no check | `doctor`, which reports any listed skill that is not installed. Checked only when `agentUser` is set. |
+
+The schema is [`schemas/repo-ai.json`](https://rtorcato.github.io/repo-ai/repo-ai.json)
+(JSON Schema draft 2020-12), which ships in the npm package too. It sets
+`additionalProperties: false`, so `doctor` reports a mistyped key as drift
+rather than silently ignoring it. It also reports a wrong type, and a file that
+is not valid JSON.
+
+`npx @rtorcato/repo-ai fix config` adds `$schema` to an existing file. With no
+file, it creates one, copying over any `agentUser` / `requiredSkills` still
+held in the legacy `.repo-tooling.json` (`rules.aiLoop.agentUser`,
+`rules.requiredSkills`). Without `.repo-ai.json` the loop falls back to that
+legacy location, and `doctor` flags it as drift.
+
 ## The one constraint
 
 By default every agent in the pipeline authenticates as **your own `gh`** — no

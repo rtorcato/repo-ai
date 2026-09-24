@@ -25,7 +25,7 @@ function recorder(fail: Record<string, FixerAbort> = {}) {
 			return [`${name}-file`]
 		}
 	const steps = Object.fromEntries(
-		['claude-skills', 'labels', 'ai-loop-identity', 'statusline'].map((n) => [n, step(n)])
+		['config', 'claude-skills', 'labels', 'ai-loop-identity', 'statusline'].map((n) => [n, step(n)])
 	)
 	return { ran, steps }
 }
@@ -36,14 +36,20 @@ describe('setup', () => {
 	})
 
 	it('orders the steps and adds the identity step only with an agent user', () => {
-		expect(setupSteps(undefined)).toEqual(['claude-skills', 'labels', 'statusline'])
-		expect(setupSteps('bot')).toEqual(['claude-skills', 'labels', 'ai-loop-identity', 'statusline'])
+		expect(setupSteps(undefined)).toEqual(['config', 'claude-skills', 'labels', 'statusline'])
+		expect(setupSteps('bot')).toEqual([
+			'config',
+			'claude-skills',
+			'labels',
+			'ai-loop-identity',
+			'statusline',
+		])
 	})
 
 	it('runs every step under --yes, in order', async () => {
 		const { ran, steps } = recorder()
 		const results = await runSetup(repo('bot'), { dir: '.', yes: true }, { steps })
-		expect(ran).toEqual(['claude-skills', 'labels', 'ai-loop-identity', 'statusline'])
+		expect(ran).toEqual(['config', 'claude-skills', 'labels', 'ai-loop-identity', 'statusline'])
 		expect(results.every((r) => r.status === 'applied')).toBe(true)
 	})
 
@@ -51,7 +57,7 @@ describe('setup', () => {
 		const { ran, steps } = recorder()
 		const confirm = async (t: string) => t !== 'labels'
 		const results = await runSetup(repo(), { dir: '.' }, { steps, confirm })
-		expect(ran).toEqual(['claude-skills', 'statusline'])
+		expect(ran).toEqual(['config', 'claude-skills', 'statusline'])
 		expect(results.find((r) => r.target === 'labels')?.status).toBe('skipped')
 	})
 
