@@ -14,6 +14,7 @@ import {
 	type SkillInstallResult,
 	skillDiffCommand,
 } from '../generators/claude-skills.js'
+import { installWorkflow, SHIPPED_WORKFLOWS, workflowsDirFor } from '../generators/workflows.js'
 
 export interface FixOptions {
 	dir: string
@@ -45,7 +46,7 @@ export const FIXERS = {
 		run: (dir) => applyLoopLabels(dir),
 	},
 	'claude-skills': {
-		description: `Install the ${SHIPPED_SKILLS.join(', ')} skills into ~/.claude/skills (or --skills-dir)`,
+		description: `Install the ${SHIPPED_SKILLS.join(', ')} skills into ~/.claude/skills (or --skills-dir), and the ${SHIPPED_WORKFLOWS.join(', ')} workflows beside them`,
 		run: (_dir, o) => installSkills(o),
 	},
 	'ai-loop-identity': {
@@ -84,6 +85,25 @@ async function installSkills({ skillsDir, forceSkills, yes, json }: FixOptions) 
 			console.error(chalk.dim(`   wrote through a symlink — commit ${result.realFile}`))
 		}
 		filesWritten.push(result.realFile)
+	}
+	// The scripts the skills run by name (#40) — versioned with them, so installed with them.
+	for (const name of SHIPPED_WORKFLOWS) {
+		const result = await installWorkflow(workflowsDirFor(dir), name, { force: forceSkills })
+		if (result.status === 'declined-downgrade' || result.status === 'declined-fork') {
+			const why =
+				result.status === 'declined-fork'
+					? 'its content matches no version this package shipped'
+					: `it is stamped ${result.installedVersion}, above the ${result.shippedVersion} this package reports`
+			console.error(chalk.yellow(`   skipped — ${result.file}: ${why}; not overwritten`))
+			console.error(
+				chalk.yellow(
+					`   compare:  ${skillDiffCommand({ realFile: result.file, shippedFile: result.shippedFile })}`
+				)
+			)
+			console.error(chalk.yellow('   overwrite anyway:  fix claude-skills --force-skills'))
+			continue
+		}
+		if (result.status !== 'up-to-date') filesWritten.push(result.file)
 	}
 	return filesWritten
 }
