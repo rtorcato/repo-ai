@@ -5,6 +5,9 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  # "Run workflow" on main releases from its tip, whatever the last merge's type
+  # — for when merges landed close together and the queue skipped a release.
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -36,22 +39,24 @@ jobs:
   # reaches npm unattended.
   release:
     needs: verify
-    # Only a merge that can release asks for approval: the squash subject's type
-    # is one the semantic-release preset releases on (feat, fix, perf, refactor,
-    # revert, update) or it's breaking. docs/ci/chore merges skip the job instead
-    # of queueing an approval that would publish nothing. A skipped releasable
-    # commit is not lost: the next release picks up everything since the last tag.
+    # Only a merge that can release asks for approval: the squash subject starts
+    # with a type the semantic-release preset releases on (feat, fix, perf,
+    # refactor, revert, update) — `feat!:` and `fix!:` included. docs/ci/chore
+    # merges skip the job instead of queueing an approval that would publish
+    # nothing. Match the start only: a squash message carries the whole PR body,
+    # so searching it for `!:` or `BREAKING CHANGE` matched PRs that merely
+    # mentioned them. A skipped releasable commit is not lost: the next release
+    # picks up everything since the last tag.
     if: >-
-      github.event_name == 'push' && github.ref == 'refs/heads/main' && (
+      github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'push' && (
         startsWith(github.event.head_commit.message, 'feat') ||
         startsWith(github.event.head_commit.message, 'fix') ||
         startsWith(github.event.head_commit.message, 'perf') ||
         startsWith(github.event.head_commit.message, 'refactor') ||
         startsWith(github.event.head_commit.message, 'revert') ||
-        startsWith(github.event.head_commit.message, 'update') ||
-        contains(github.event.head_commit.message, 'BREAKING CHANGE') ||
-        contains(github.event.head_commit.message, '!:')
-      )
+        startsWith(github.event.head_commit.message, 'update')
+      ))
     runs-on: ubuntu-latest
     environment: release
     permissions:
