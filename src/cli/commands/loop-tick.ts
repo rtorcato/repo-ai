@@ -142,6 +142,10 @@ interface RestIssue {
  * Skills and workflows are `.md`/YAML an agent or runner acts on, so never docs.
  * An empty or unreadable file list fails closed to the full review.
  */
+// Files an agent reads as instructions, at any depth: never docs (#72).
+const AGENT_INSTRUCTIONS =
+	/(^|\/)(AGENTS\.md|CLAUDE(\.local)?\.md|GEMINI\.md|copilot-instructions\.md|\.cursorrules|\.windsurfrules|\.cursor\/|\.claude\/)/i
+
 export function isDocsOnly(files: string[]): boolean {
 	return (
 		files.length > 0 &&
@@ -149,7 +153,7 @@ export function isDocsOnly(files: string[]): boolean {
 			(f) =>
 				!f.startsWith('skills/') &&
 				!f.startsWith('.github/workflows/') &&
-				!/(^|\/)(AGENTS|CLAUDE)\.md$/.test(f) &&
+				!AGENT_INSTRUCTIONS.test(f) &&
 				(/\.mdx?$/.test(f) ||
 					f.startsWith('apps/docs/docs/') ||
 					f.startsWith('.github/ISSUE_TEMPLATE/'))

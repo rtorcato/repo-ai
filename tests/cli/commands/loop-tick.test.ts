@@ -305,6 +305,13 @@ describe('isDocsOnly', () => {
 			'CLAUDE.md',
 			'packages/x/AGENTS.md',
 			'.claude/CLAUDE.md',
+			'CLAUDE.local.md',
+			'docs/GEMINI.md',
+			'.cursorrules',
+			'.cursor/rules/x.md',
+			'a/.claude/commands/x.md',
+			'.github/copilot-instructions.md',
+			'.windsurfrules',
 		])
 			expect(isDocsOnly(['README.md', f])).toBe(false)
 		expect(isDocsOnly([])).toBe(false)
