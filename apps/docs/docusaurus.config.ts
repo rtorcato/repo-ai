@@ -84,6 +84,11 @@ const config: Config = {
 					items: [{ label: 'All on GitHub →', href: GITHUB_PROFILE }, ...PROJECT_FAMILY],
 				},
 				{ href: 'https://github.com/rtorcato/repo-ai', label: 'GitHub', position: 'right' },
+				{
+					href: 'https://www.npmjs.com/package/@rtorcato/repo-ai',
+					label: 'npm',
+					position: 'right',
+				},
 			],
 		},
 		footer: {
@@ -102,6 +107,7 @@ const config: Config = {
 					title: 'Resources',
 					items: [
 						{ label: 'GitHub', href: 'https://github.com/rtorcato/repo-ai' },
+						{ label: 'npm', href: 'https://www.npmjs.com/package/@rtorcato/repo-ai' },
 						{ label: 'Issues', href: 'https://github.com/rtorcato/repo-ai/issues' },
 						{ label: 'repo-tooling', href: 'https://rtorcato.github.io/repo-tooling/' },
 					],

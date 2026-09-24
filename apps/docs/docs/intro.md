@@ -33,10 +33,5 @@ Every command takes `--json`.
 2. Check the repo meets the [prerequisites](./ai-issue-loop.md#repo-prerequisites).
 3. File an issue with `/ai-issue`, then run `/ai-workflow` in Claude Code.
 
-:::note Pre-release
-`@rtorcato/repo-ai` is not on npm yet. Until the first release, run the CLI from a
-clone: `pnpm install && pnpm build && node dist/cli/index.js <command>`.
-:::
-
 Read [The AI Issue Loop](./ai-issue-loop.md) for how the pipeline works, and
 [Commands](./commands.md) for every command.
