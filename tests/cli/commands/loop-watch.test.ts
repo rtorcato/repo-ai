@@ -1,8 +1,10 @@
 import { join } from 'node:path'
 import fs from 'fs-extra'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import type { GhExec } from '../../../src/base/gh.js'
+import { runLoopGuard } from '../../../src/cli/commands/loop-guard.js'
 import type { LoopTickResult } from '../../../src/cli/commands/loop-tick.js'
-import { runLoopWatch } from '../../../src/cli/commands/loop-watch.js'
+import { actionable, describeWork, runLoopWatch } from '../../../src/cli/commands/loop-watch.js'
 import { useTmpDir } from '../../helpers/tmp-dir.js'
 
 const newTmpDir = useTmpDir()
@@ -15,7 +17,7 @@ const tick = (extra: Partial<LoopTickResult> = {}) =>
 		slots: 6,
 		...Object.fromEntries(
 			['adopt', 'disarm', 'handoffs', 'sendBacks', 'stripMergeReady', 'cleaned', 'stalled']
-				.concat(['decay', 'verdicts', 'reviewsToSpawn', 'fixRounds', 'pickups'])
+				.concat(['decay', 'verdicts', 'reviewsToSpawn', 'fixRounds', 'pickups', 'updateBranches'])
 				.map((k) => [k, []])
 		),
 		...extra,
@@ -35,6 +37,7 @@ async function watch(results: (LoopTickResult | Error)[]) {
 		},
 		sleep: async (ms) => void sleeps.push(ms),
 		write: (l) => lines.push(l),
+		now: () => new Date(2026, 0, 1, 9, 5),
 	})
 	return { lines, sleeps }
 }
@@ -49,7 +52,7 @@ describe('runLoopWatch', () => {
 			review,
 			tick({ summary: '1ready', handoffs: [{ pr: 7, issue: 3, notes: false, autoMerge: false }] }),
 		])
-		expect(lines).toEqual(['1rev', '1ready'])
+		expect(lines).toEqual(['09:05  1rev  review #7', '09:05  1ready  handoff #7'])
 		expect(sleeps).toEqual([180_000, 180_000])
 	})
 
@@ -81,7 +84,11 @@ describe('runLoopWatch', () => {
 		const halt = tick({ halt: 'root is bare', exitCode: 1 })
 		const erred = tick({ errors: ['gh pr list failed'] })
 		const { lines } = await watch([halt, halt, new Error('boom'), erred, review, halt])
-		expect(lines).toEqual(['⚠halt: root is bare', '1rev', '⚠halt: root is bare'])
+		expect(lines).toEqual([
+			'09:05  ⚠halt: root is bare',
+			'09:05  1rev  review #7',
+			'09:05  ⚠halt: root is bare',
+		])
 	})
 
 	it('reads pollSeconds from .repo-ai.json, floored at 60', async () => {
@@ -96,5 +103,53 @@ describe('runLoopWatch', () => {
 			write: () => {},
 		})
 		expect(sleeps).toEqual([60_000])
+	})
+
+	it('warns once on an identity mismatch and keeps printing the work list (#82)', async () => {
+		const root = newTmpDir()
+		fs.ensureDirSync(join(root, '.git'))
+		fs.outputJsonSync(join(root, '.repo-ai.json'), { agentUser: 'some-bot' })
+		const gh: GhExec = async () => ({ ok: true, stdout: 'the-owner\n', stderr: '', code: 0 })
+		const warn = vi.spyOn(console, 'error').mockImplementation(() => {})
+		const lines: string[] = []
+		await runLoopWatch({
+			root,
+			polls: 2,
+			gh,
+			// The real guard, against the gh the tick would get.
+			poll: async (tickGh) => {
+				const g = await runLoopGuard({ root, git: async () => 'true', gh: tickGh })
+				return g.exitCode === 0 ? review : tick({ halt: g.messages.join('; '), exitCode: 2 })
+			},
+			sleep: async () => {},
+			write: (l) => lines.push(l),
+			now: () => new Date(2026, 0, 1, 15, 42),
+		})
+		expect(lines).toEqual(['15:42  1rev  review #7'])
+		expect(warn).toHaveBeenCalledTimes(1)
+		expect(String(warn.mock.calls[0][0])).toContain('agentUser is some-bot')
+		warn.mockRestore()
+	})
+})
+
+describe('describeWork', () => {
+	it('lists only non-empty categories, by number', () => {
+		const w = actionable(
+			tick({
+				reviewsToSpawn: [
+					{ pr: 78, issue: 1, arm: 'code' },
+					{ pr: 78, issue: 1, arm: 'sec' },
+				],
+				updateBranches: [{ pr: 74, issue: 2 }],
+				pickups: [
+					{ number: 39, title: 'x', body: 'untrusted' },
+					{ number: 41, title: 'y', body: 'untrusted' },
+				],
+				stalled: [{ issue: 55, pr: null, label: 'ai-wip', action: 'block' }],
+			} as Partial<LoopTickResult>)
+		)
+		expect(describeWork('5wip·1rev', w, new Date(2026, 0, 1, 15, 42))).toBe(
+			'15:42  5wip·1rev  review #78 · update #74 · pickup #39 #41 · stalled #55'
+		)
 	})
 })

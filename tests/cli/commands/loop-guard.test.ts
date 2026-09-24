@@ -319,6 +319,7 @@ describe('runLoopGuard — bot-identity preflight (#601)', () => {
 		expect(result.exitCode).toBe(2)
 		expect(result.messages.join('\n')).toContain('agentUser is some-bot')
 		expect(result.messages.join('\n')).toContain('the-owner')
+		expect(result.messages.join('\n')).toContain('GH_TOKEN=$(gh auth token --user some-bot) claude')
 	})
 
 	it('halts when gh cannot say who it is', async () => {
