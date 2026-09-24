@@ -100,9 +100,8 @@ const PILLARS: { title: string; desc: string; icon: IconKey }[] = [
 const EXAMPLES: { label: string; file: string; code: string }[] = [
 	{
 		label: 'install',
-		file: 'Install the skills and repair the loop labels',
-		code: `npx @rtorcato/repo-ai fix claude-skills
-npx @rtorcato/repo-ai fix labels`,
+		file: 'Skills, labels, agent identity and statusline — asking before each',
+		code: `npx @rtorcato/repo-ai setup`,
 	},
 	{
 		label: 'run',

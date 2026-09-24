@@ -29,7 +29,7 @@ Every command takes `--json`.
 
 ## Start here
 
-1. Install the skills: `npx @rtorcato/repo-ai fix claude-skills`.
+1. Run `npx @rtorcato/repo-ai setup` — skills, labels, agent identity and statusline, asking before each.
 2. Check the repo meets the [prerequisites](./ai-issue-loop.md#repo-prerequisites).
 3. File an issue with `/ai-issue`, then run `/ai-workflow` in Claude Code.
 

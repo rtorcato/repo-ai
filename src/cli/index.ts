@@ -10,6 +10,7 @@ import { loopCommentCommand, loopVerdictCommand } from './commands/loop-marker.j
 import { loopReapCommand } from './commands/loop-reap.js'
 import { loopTickCommand } from './commands/loop-tick.js'
 import { loopWorktreeAddCommand } from './commands/loop-worktree.js'
+import { setupCommand } from './commands/setup.js'
 import { getToolVersion } from './utils/version.js'
 
 const program = new Command()
@@ -18,6 +19,19 @@ program
 	.name('repo-ai')
 	.description('🤖 The ai-issue-loop pipeline: loop mechanics, skills, and their audit')
 	.version(await getToolVersion())
+
+program
+	.command('setup')
+	.description(
+		'🚀 Onboard a repo: claude-skills, labels, ai-loop-identity, statusline — asking before each — then doctor'
+	)
+	.option('-d, --dir <path>', 'Repository to set up', process.cwd())
+	.option('-y, --yes', 'Run every step without prompting')
+	.option('--skills-dir <path>', 'claude-skills: install here instead of ~/.claude/skills')
+	.option('--force-skills', 'claude-skills: overwrite a locally modified or newer copy')
+	.option('--gh-config-dir <path>', 'ai-loop-identity: the agent gh profile directory')
+	.option('--json', 'Emit machine-readable JSON output (implies --yes)')
+	.action(setupCommand)
 
 program
 	.command('doctor')

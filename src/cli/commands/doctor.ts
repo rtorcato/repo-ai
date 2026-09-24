@@ -42,6 +42,13 @@ const ICON: Record<CheckResult['status'], string> = {
 	declared: chalk.blue('◇'),
 }
 
+export function printResults(results: CheckResult[]): void {
+	for (const r of results) {
+		console.log(`${ICON[r.status]} ${r.check}: ${r.detail}`)
+		if (r.hint && r.status !== 'ok') console.log(chalk.dim(`   ${r.hint}`))
+	}
+}
+
 export async function doctorCommand(options: {
 	dir: string
 	json?: boolean
@@ -52,10 +59,7 @@ export async function doctorCommand(options: {
 	if (options.json) {
 		console.log(JSON.stringify({ directory, results }, null, 2))
 	} else {
-		for (const r of results) {
-			console.log(`${ICON[r.status]} ${r.check}: ${r.detail}`)
-			if (r.hint && r.status !== 'ok') console.log(chalk.dim(`   ${r.hint}`))
-		}
+		printResults(results)
 	}
 	process.exitCode = results.some((r) => r.status === 'drift' || r.status === 'missing') ? 1 : 0
 }

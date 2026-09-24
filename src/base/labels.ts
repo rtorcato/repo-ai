@@ -182,14 +182,19 @@ export async function checkLoopLabels(dir: string, exec?: GhExec): Promise<Check
  * Repairs colour and description with `gh label edit`, and creates the labels
  * the set is missing. Only on a repo already running the loop (the same
  * `IN_USE_THRESHOLD` gate the check uses) — otherwise a plain `fix --yes` would
- * push fourteen labels into every repo it touches.
+ * push fourteen labels into every repo it touches. `bootstrap` skips that gate:
+ * `setup` is an explicit opt-in into the loop, so it creates the whole set (#12).
  *
  * Idempotent: an aligned repo is a no-op, and a label whose only difference is
  * the hex case is not touched at all.
  *
  * Advisories go to `console.error`; stdout carries the `--json` payload (#357).
  */
-export async function applyLoopLabels(dir: string, exec?: GhExec): Promise<string[]> {
+export async function applyLoopLabels(
+	dir: string,
+	exec?: GhExec,
+	opts: { bootstrap?: boolean } = {}
+): Promise<string[]> {
 	if (!(await fs.pathExists(path.join(dir, '.git')))) {
 		console.error(chalk.gray('   skipped — not a git repository'))
 		return []
@@ -202,7 +207,7 @@ export async function applyLoopLabels(dir: string, exec?: GhExec): Promise<strin
 	}
 
 	const { present, missing, wrongColor, wrongDescription } = classifyLabels(existing)
-	if (present.length < IN_USE_THRESHOLD) {
+	if (!opts.bootstrap && present.length < IN_USE_THRESHOLD) {
 		console.error(chalk.gray('   skipped — repo does not use the ai-issue-loop labels'))
 		return []
 	}
