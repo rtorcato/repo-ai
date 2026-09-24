@@ -22,6 +22,6 @@ jobs:
       contents: read
       pages: write
       id-token: write
-    uses: rtorcato/repo-tooling/.github/workflows/docs-deploy.yml@main
+    uses: rtorcato/repo-tooling/.github/workflows/docs-deploy.yml@e77052880d4a9b59aa4a678267a439d0697e3a43 # main as of 2026-09-24
     with:
       build-filter: '@rtorcato/repo-ai-docs'
