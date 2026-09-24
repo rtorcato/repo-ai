@@ -222,6 +222,35 @@ export async function runLoopTick(options: LoopTickOptions = {}): Promise<LoopTi
 		return null
 	}
 
+	// A closed issue still wearing ai-wip: its worktree is already gone, so no
+	// later cleanup would ever report it. Listing it lets Pass 2 strip the label
+	// whatever interrupted the tick that removed the worktree (#23).
+	const closedWip = await json<{ number: number }[]>([
+		'issue',
+		'list',
+		'--label',
+		'ai-wip',
+		'--state',
+		'closed',
+		'--limit',
+		'100',
+		'--json',
+		'number',
+	])
+	const cleanedIssues = new Set(result.cleaned.map((w) => w.issue))
+	for (const { number } of closedWip ?? []) {
+		if (cleanedIssues.has(number)) continue
+		result.cleaned.push({
+			path: '',
+			issue: number,
+			branch: null,
+			pr: null,
+			prState: null,
+			action: 'relabel',
+			reason: 'issue closed while still labelled ai-wip',
+		})
+	}
+
 	const prs = await json<Pr[]>([
 		'pr',
 		'list',
@@ -417,9 +446,15 @@ export async function runLoopTick(options: LoopTickOptions = {}): Promise<LoopTi
 		errors.length === 0 &&
 		loopPrs.length === 0 &&
 		live.length === 0 &&
-		[result.adopt, result.pickups, result.stalled, result.decay, result.dependabotCiRed].every(
-			(l) => l.length === 0
-		)
+		// `cleaned` counts: an idle tick skips Pass 2, which is what strips ai-wip.
+		[
+			result.adopt,
+			result.cleaned,
+			result.pickups,
+			result.stalled,
+			result.decay,
+			result.dependabotCiRed,
+		].every((l) => l.length === 0)
 	result.summary = summarize(result, inFlight, loopPrs.length)
 	return result
 }
