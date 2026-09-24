@@ -7,7 +7,7 @@ description: |
   `ai-changes` with a fix round, hand passed issue PRs to the human, clean up
   merged worktrees, reap stalled agents, and pick up any remaining `ai-ready`
   issues. `/ai-workflow` is the entry point and schedules this itself via
-  `/loop 15m /ai-issue-loop`; reach for it directly only to force a tick early —
+  `/loop /ai-issue-loop` (self-paced); reach for it directly only to force a tick early —
   "run one tick", "babysit the AI PRs" — or when the user invokes
   `/ai-issue-loop`. It never merges; Dependabot PRs are handled by their own
   workflow, outside this loop.
@@ -540,16 +540,14 @@ borrows the `⚠`.
 ```bash
 STATUS="$ROOT/.claude/ai-loop-status"   # absolute — a pinned tick's cwd is a worktree
 PREV=$(head -1 "$STATUS" 2>/dev/null)
-IDLE=$(sed -n 2p "$STATUS" 2>/dev/null); IDLE=${IDLE:-0}
-PREV_SUGGESTED=$(sed -n 3p "$STATUS" 2>/dev/null)
+PREV_SUGGESTED=$(sed -n 2p "$STATUS" 2>/dev/null)
 DIGEST=$(gh issue list -R "$OWNER_REPO" --label ai-suggested --state open --limit 100 \
   --json number,title --jq 'sort_by(.number) | .[] | "#\(.number) \(.title)"')
 SUGGESTED=$(printf '%s\n' "$DIGEST" | grep -o '^#[0-9]*' | tr -d '#' | paste -sd, -)
 ```
 
-- **`SUMMARY` != `PREV`** → notify, and `IDLE=0`.
-- **`SUMMARY` == `idle`** → `IDLE=$((IDLE+1))`; notify **only when `IDLE` is
-  exactly 4** (≈1h quiet), with `idle 1h — no ai-ready issues`.
+- **`SUMMARY` != `PREV`** → notify. Going quiet is a change too, so the first
+  `idle` tick notifies once.
 - **Otherwise** → silent. Unchanged state is not news.
 
 At most one notification, via the **`PushNotification`** tool — `message`:
@@ -561,10 +559,12 @@ osascript -e "display notification \"$SUMMARY\" with title \"ai-issue-loop\" sub
   || notify-send "ai-issue-loop" "$OWNER_REPO: $SUMMARY" 2>/dev/null || true
 ```
 
-Write the status file **last** (the statusline hides it after 20 minutes):
+Write the status file **last**. Its age is the liveness signal: ticks run at
+most 30 minutes apart, so a file older than about 35 minutes means the loop has
+stopped, and a statusline should hide it past that.
 
 ```bash
-printf '%s\n%s\n%s\n' "$SUMMARY" "$IDLE" "$SUGGESTED" > "$STATUS"
+printf '%s\n%s\n' "$SUMMARY" "$SUGGESTED" > "$STATUS"
 ```
 
 Print `SUMMARY` plus at most five lines — handed over, cleaned up, sent to
@@ -572,16 +572,35 @@ review, picked up, blocked — marking handoffs carrying `ai-notes`, and any
 `.errors`. Then print `$DIGEST`, unless `$SUGGESTED` is empty or equals
 `$PREV_SUGGESTED`.
 
+**Pace the next tick — last, and only under a self-paced `/loop`** (the
+`ScheduleWakeup` tool is available). A manual `/ai-issue-loop` or a fixed-interval
+`/loop` schedules nothing. Call `ScheduleWakeup` with `prompt: "/ai-issue-loop"`
+and:
+
+| This tick | `delaySeconds` | Why |
+|---|---|---|
+| `SUMMARY` is `idle` | `1800` | Nothing to watch; a new `ai-ready` issue can wait half an hour. |
+| Anything else | `600` | Agents in flight, reviews pending, or a PR waiting — check back sooner. |
+
+`noop: true` when `SUMMARY` == `PREV`, else `false`, so quiet stretches collapse
+in the terminal. `reason` is one line naming what the next tick is for, e.g.
+`2 reviews and 1 implementer in flight`. Never stop the loop from here — an idle
+loop is cheap, and a stopped one misses the next `ai-ready` issue.
+
 ---
 
 ## Driving it
 
 ```
-/loop 15m /ai-issue-loop
+/loop /ai-issue-loop
 ```
 
-Ticks fire only while the REPL is idle; `/loop` expires after 7 days. Stop with
-`/loop stop`, or remove the `ai-ready` labels. On a new repo, run
+No interval: the loop is self-paced. Each tick's Pass 5 schedules the next one,
+10 minutes out while work is in flight and 30 minutes when idle. A fixed
+`/loop 15m /ai-issue-loop` still works; Pass 5 just skips the pacing step.
+
+Ticks fire only while the REPL is idle. Stop by asking the session to stop the
+loop, or remove the `ai-ready` labels and let it idle. On a new repo, run
 `/ai-issue-loop` **manually** three or four times against one trivial issue first.
 
 ## Repo prerequisites

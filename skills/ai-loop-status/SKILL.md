@@ -86,6 +86,16 @@ argument.
    and whether it dies with the session. A pipeline with labels but no job is
    stalled, and that is the single most likely reason nothing is moving.
 
+   A self-paced `/loop /ai-issue-loop` may not show up as a job: each tick
+   schedules only the next one. Then the evidence is the status file's age —
+   ticks run at most 30 minutes apart, so a file older than about 35 minutes
+   means the loop has stopped:
+
+   ```bash
+   STATUS="$ROOT/.claude/ai-loop-status"
+   [ -f "$STATUS" ] && echo "last tick $(( ($(date +%s) - $(stat -f %m "$STATUS" 2>/dev/null || stat -c %Y "$STATUS")) / 60 ))m ago"
+   ```
+
 6. **Verify the merge gate only when something looks stuck** — skip these on a
    healthy run, they are noise:
 
@@ -104,7 +114,7 @@ argument.
    ```
    ai-issue-loop — <repo> — <date>
 
-   Schedule: every 15m (session-only)   (or: NOT SCHEDULED)
+   Schedule: self-paced, last tick 8m ago   (or: every 15m, or: NOT SCHEDULED)
 
    In flight (2/6 slots):
      #41  add a --json flag to doctor        PR #58  ai-review, waiting on security-expert
