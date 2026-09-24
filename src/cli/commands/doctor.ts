@@ -1,13 +1,12 @@
 import os from 'node:os'
 import path from 'node:path'
 import chalk from 'chalk'
-import fs from 'fs-extra'
 import { checkAgentUser } from '../../base/agent-user.js'
 import { checkClaudeSkills, checkRequiredSkills } from '../../base/checks.js'
+import { CONFIG_FILE, readConfig } from '../../base/config.js'
 import { checkLoopLabels } from '../../base/labels.js'
 import { checkStatusline } from '../../base/statusline.js'
 import type { CheckResult } from '../../base/types.js'
-import { configuredAgentUser } from './loop-guard.js'
 
 /**
  * The loop's own audit — the four checks that used to ride along in
@@ -15,23 +14,27 @@ import { configuredAgentUser } from './loop-guard.js'
  * `drift` / `missing` fail, everything else is informational.
  */
 export async function runDoctor(dir: string, skillsDir?: string): Promise<CheckResult[]> {
-	const agentUser = await configuredAgentUser(dir)
+	const config = await readConfig(dir)
 	const results = [
 		await checkLoopLabels(dir),
-		await checkAgentUser(dir, agentUser),
+		await checkAgentUser(dir, config.agentUser),
 		await checkClaudeSkills(skillsDir),
 		await checkStatusline(os.homedir()),
 	]
+	if (config.source === 'repo-tooling.json') {
+		results.push({
+			check: 'Loop config',
+			status: 'drift',
+			detail: `agentUser/requiredSkills still read from legacy .repo-tooling.json rules.aiLoop`,
+			hint: `Move them to ${CONFIG_FILE} — repo-ai's own config, not repo-tooling's`,
+		})
+	}
 	// Gated on agentUser: that key is the "this repo runs the pipeline" signal.
-	const required = await requiredSkills(dir)
-	if (agentUser && required.length > 0) results.push(await checkRequiredSkills(required, skillsDir))
+	const required = config.requiredSkills ?? []
+	if (config.agentUser && required.length > 0) {
+		results.push(await checkRequiredSkills(required, skillsDir))
+	}
 	return results
-}
-
-async function requiredSkills(dir: string): Promise<string[]> {
-	const raw = await fs.readJson(path.join(dir, '.repo-tooling.json')).catch(() => null)
-	const names = raw?.rules?.requiredSkills
-	return Array.isArray(names) ? names.filter((n): n is string => typeof n === 'string') : []
 }
 
 const ICON: Record<CheckResult['status'], string> = {
