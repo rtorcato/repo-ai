@@ -1,15 +1,17 @@
+import os from 'node:os'
 import path from 'node:path'
 import chalk from 'chalk'
 import fs from 'fs-extra'
 import { checkAgentUser } from '../../base/agent-user.js'
 import { checkClaudeSkills, checkRequiredSkills } from '../../base/checks.js'
 import { checkLoopLabels } from '../../base/labels.js'
+import { checkStatusline } from '../../base/statusline.js'
 import type { CheckResult } from '../../base/types.js'
 import { configuredAgentUser } from './loop-guard.js'
 
 /**
  * The loop's own audit — the four checks that used to ride along in
- * `repo-tooling doctor`. Same config file, same verdicts, same exit rule:
+ * `repo-tooling doctor`, plus the statusline (#11). Same config file, same verdicts, same exit rule:
  * `drift` / `missing` fail, everything else is informational.
  */
 export async function runDoctor(dir: string, skillsDir?: string): Promise<CheckResult[]> {
@@ -18,6 +20,7 @@ export async function runDoctor(dir: string, skillsDir?: string): Promise<CheckR
 		await checkLoopLabels(dir),
 		await checkAgentUser(dir, agentUser),
 		await checkClaudeSkills(skillsDir),
+		await checkStatusline(os.homedir()),
 	]
 	// Gated on agentUser: that key is the "this repo runs the pipeline" signal.
 	const required = await requiredSkills(dir)

@@ -5,6 +5,7 @@ import inquirer from 'inquirer'
 import { setupAgentIdentity } from '../../base/ai-loop-identity.js'
 import { FixerAbort } from '../../base/fixer-abort.js'
 import { applyLoopLabels } from '../../base/labels.js'
+import { installStatusline } from '../../base/statusline.js'
 import {
 	installClaudeSkill,
 	resolveSkillsDir,
@@ -44,6 +45,11 @@ export const FIXERS: Record<
 		description:
 			"Point this checkout's Claude sessions at a gh profile signed in as rules.aiLoop.agentUser",
 		run: (dir, o) => setupAgentIdentity(dir, { ghConfigDir: o.ghConfigDir, home: os.homedir() }),
+	},
+	statusline: {
+		description:
+			'Install the loop status segment to ~/.claude/ai-loop-statusline.sh; set it as the statusline only when none is configured',
+		run: () => installStatusline(os.homedir()),
 	},
 }
 
