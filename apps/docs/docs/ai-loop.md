@@ -295,6 +295,10 @@ statusline segment (`npx @rtorcato/repo-ai fix statusline`) shows it:
 by hand, and nothing once the last tick is over 35 minutes old. `/ai-loop-status`
 reports the same.
 
+**Don't want to wait?** `/ai-tick` runs one tick now, say after merging a PR or
+labelling an issue `ai-ready`. It schedules nothing, so a running loop keeps its
+own wakeup.
+
 Ticks fire only while the REPL is idle. Stop by asking the session to stop the
 loop, or just remove the `ai-ready` labels — the loop then idles harmlessly.
 

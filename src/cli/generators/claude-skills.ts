@@ -18,7 +18,7 @@ import { type GitExec, isNewerVersion, resolveShippedVersion } from '../utils/ve
  * Skills this package owns the content of and keeps up to date. The loop first —
  * it is the pipeline; the other three are its drivers (burst, on-ramp, status).
  */
-export const SHIPPED_SKILLS = ['ai-loop', 'ai-workflow', 'ai-issue', 'ai-loop-status']
+export const SHIPPED_SKILLS = ['ai-loop', 'ai-workflow', 'ai-issue', 'ai-loop-status', 'ai-tick']
 
 /** The primary skill — the default everywhere a single name is accepted. */
 export const SHIPPED_SKILL = 'ai-loop'
