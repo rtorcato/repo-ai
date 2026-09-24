@@ -5,15 +5,19 @@ on:
     paths:
       - 'apps/docs/**'
       - '.github/workflows/docs.yml'
-  # The changelog page is built from GitHub Releases, and no release commit
-  # lands on main any more (see #417) — so a push trigger alone would never
-  # rebuild the site after a release.
-  release:
-    types: [published]
+  # The changelog page is built from GitHub Releases. The release job creates
+  # them with GITHUB_TOKEN, and events from that token never start other
+  # workflows, so `release: published` would never fire. Rebuild when CI —
+  # whose last job is the release — finishes green on main instead.
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
 
 jobs:
   docs:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     permissions:
       contents: read
       pages: write
