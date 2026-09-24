@@ -281,8 +281,12 @@ issue; that is what double-picks it.
 instead of one. It exists because a pass label otherwise means both "clean" and
 "I found something real but would not hold the PR over it", and those two are
 indistinguishable in the *Assigned to you* view where merges actually happen.
-The bar is a finding that **changes what a human would do**: a semver
-implication, a deliberate omission, a follow-up that must be filed.
+The bar is a finding that **changes whether or how a human should merge**: a
+semver implication, a deliberate omission, a risky migration, a decision only a
+human can make. An open question the reviewer couldn't settle from the diff is
+not a finding — it settles it with a read-only check, or passes clean, or files
+an `ai-suggested` issue when later work is needed. A note that concludes "no
+action needed" is never written.
 `ai-notes` on every PR is the failure mode — it trains the reader to ignore it.
 
 ## Repo prerequisites
