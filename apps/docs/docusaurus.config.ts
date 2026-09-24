@@ -1,11 +1,16 @@
 import type * as Preset from '@docusaurus/preset-classic'
 import type { Config } from '@docusaurus/types'
+import { copyright, GITHUB_PROFILE, projectFamilyItems } from '@rtorcato/shared-docs'
 import { themes as prismThemes } from 'prism-react-renderer'
+
+// The @rtorcato family, from the shared single source of truth — a navbar
+// "Projects" dropdown and a footer column, as on every sibling site.
+const PROJECT_FAMILY = projectFamilyItems()
 
 const config: Config = {
 	title: 'repo-ai',
 	tagline:
-		'The ai-issue-loop pipeline — loop mechanics, Claude Code skills, and their audit — split out of @rtorcato/repo-tooling',
+		'Turns ai-ready GitHub issues into reviewed PRs — one worktree per issue, two agent reviewers.',
 	favicon: 'img/favicon.svg',
 
 	url: 'https://rtorcato.github.io',
@@ -67,31 +72,53 @@ const config: Config = {
 		},
 		navbar: {
 			title: 'repo-ai',
+			logo: { alt: 'repo-ai', src: 'img/favicon.svg' },
 			items: [
 				{ to: '/docs', position: 'left', label: 'Docs' },
+				{ to: '/docs/ai-issue-loop', position: 'left', label: 'Guide' },
+				{ to: '/docs/commands', position: 'left', label: 'Commands' },
 				{
-					href: 'https://github.com/rtorcato/repo-ai',
-					label: 'GitHub',
-					position: 'right',
+					type: 'dropdown',
+					label: 'Projects',
+					position: 'left',
+					items: [{ label: 'All on GitHub →', href: GITHUB_PROFILE }, ...PROJECT_FAMILY],
 				},
+				{ href: 'https://github.com/rtorcato/repo-ai', label: 'GitHub', position: 'right' },
 			],
 		},
 		footer: {
 			style: 'dark',
 			links: [
 				{
-					title: 'Docs',
-					items: [{ label: 'Getting Started', to: '/docs' }],
+					title: 'Documentation',
+					items: [
+						{ label: 'Introduction', to: '/docs' },
+						{ label: 'The AI Issue Loop', to: '/docs/ai-issue-loop' },
+						{ label: 'Commands', to: '/docs/commands' },
+						{ label: 'Changelog', to: '/docs/changelog' },
+					],
 				},
 				{
-					title: 'More',
+					title: 'Resources',
 					items: [
 						{ label: 'GitHub', href: 'https://github.com/rtorcato/repo-ai' },
 						{ label: 'Issues', href: 'https://github.com/rtorcato/repo-ai/issues' },
+						{ label: 'repo-tooling', href: 'https://rtorcato.github.io/repo-tooling/' },
+					],
+				},
+				{ title: 'Projects', items: PROJECT_FAMILY },
+				{
+					title: 'Community',
+					items: [
+						{
+							label: 'License (MIT)',
+							href: 'https://github.com/rtorcato/repo-ai/blob/main/LICENSE',
+						},
+						{ label: '@rtorcato', href: GITHUB_PROFILE },
 					],
 				},
 			],
-			copyright: `Copyright © ${new Date().getFullYear()} repo-ai. Built with Docusaurus.`,
+			copyright: copyright(),
 		},
 		// `theme` is the LIGHT-mode Prism theme and `darkTheme` the dark one. Both
 		// were vsDark here, which is why the shared stylesheet had to pin fenced
