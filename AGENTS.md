@@ -20,3 +20,13 @@ Config is read from the consuming repo's `.repo-tooling.json`: `rules.aiLoop.age
 - Tests in `tests/`, run with vitest.
 - `pnpm verify` runs check, typecheck, tests and build, and is the pre-push gate.
 - Every command supports `--json`. In JSON mode, diagnostics go to stderr, never stdout.
+
+## Working on this repo
+
+`main` is protected: every change lands through a PR, and the `verify` CI job is the required check.
+
+- Branch per issue: `<type>/<issue-N>-<short-name>`, e.g. `fix/12-reap-timeout`.
+- The PR title is a Conventional Commit, because it becomes the squash commit subject on `main`.
+- Merges are squash-only. Branches are deleted on merge.
+- Queue the merge with `gh pr merge --auto --squash --delete-branch`.
+- Releases go through the `release` environment, which needs a maintainer's approval before anything is published to npm.
