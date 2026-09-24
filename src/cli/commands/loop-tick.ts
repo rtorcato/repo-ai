@@ -34,7 +34,7 @@ export const DECAY_DAYS = 30
 
 const TRUSTED = new Set(['OWNER', 'MEMBER', 'COLLABORATOR'])
 /** Merge states that name something to fix; any other non-CLEAN state waits. */
-const SEND_BACK_STATES = new Set(['BEHIND', 'DIRTY', 'BLOCKED'])
+const SEND_BACK_STATES = new Set(['DIRTY', 'BLOCKED'])
 
 type Arm = 'code' | 'sec'
 const ARMS: Arm[] = ['code', 'sec']
@@ -51,7 +51,7 @@ export interface SendBack {
 	pr: number
 	issue: number | null
 	/** `ci-red`, or the `mergeStateStatus` that blocks the handoff. */
-	reason: 'ci-red' | 'BEHIND' | 'DIRTY' | 'BLOCKED'
+	reason: 'ci-red' | 'DIRTY' | 'BLOCKED'
 	/** Failing required checks, for the comment. */
 	failing: { name: string; link: string }[]
 }
@@ -79,6 +79,8 @@ export interface LoopTickResult {
 	disarm: number[]
 	handoffs: Handoff[]
 	sendBacks: SendBack[]
+	/** Pass 1 — passed but `BEHIND`: `gh pr update-branch`; send back only if that fails (#51). */
+	updateBranches: { pr: number; issue: number | null }[]
 	/** Pass 1 — `merge-ready` that no longer holds (not CLEAN, or `ai-changes`). */
 	stripMergeReady: number[]
 	/** Pass 1 — flag only, never send back. */
@@ -167,6 +169,7 @@ function empty(env: LoopEnv): LoopTickResult {
 		disarm: [],
 		handoffs: [],
 		sendBacks: [],
+		updateBranches: [],
 		stripMergeReady: [],
 		dependabotCiRed: [],
 		dependabotChanges: [],
@@ -327,6 +330,7 @@ export async function runLoopTick(options: LoopTickOptions = {}): Promise<LoopTi
 		const claimed = has('ai-reviewing-code') || has('ai-reviewing-sec')
 
 		// CI red is a send-back, except mid-review or when one is already out.
+		let pending = false
 		if (!claimed && !has('ai-changes')) {
 			const r = await gh([
 				'pr',
@@ -334,10 +338,10 @@ export async function runLoopTick(options: LoopTickOptions = {}): Promise<LoopTi
 				String(pr.number),
 				'--required',
 				'--json',
-				'name,state,link',
+				'name,state,bucket,link',
 			])
 			// Exits non-zero whenever a check fails or is pending; stdout is still the answer.
-			let checks: { name: string; state: string; link: string }[] = []
+			let checks: { name: string; state: string; bucket?: string; link: string }[] = []
 			try {
 				checks = JSON.parse(r.stdout || '[]')
 			} catch {}
@@ -348,6 +352,7 @@ export async function runLoopTick(options: LoopTickOptions = {}): Promise<LoopTi
 				result.sendBacks.push({ pr: pr.number, issue, reason: 'ci-red', failing })
 				continue
 			}
+			pending = checks.some((c) => c.bucket === 'pending')
 		}
 
 		if (has('ai-changes')) {
@@ -369,6 +374,10 @@ export async function runLoopTick(options: LoopTickOptions = {}): Promise<LoopTi
 					notes,
 					autoMerge: result.releaseGated && !notes,
 				})
+			} else if (s === 'BEHIND') {
+				result.updateBranches.push({ pr: pr.number, issue })
+			} else if (s === 'BLOCKED' && pending) {
+				// Required checks still running: the next tick sees them land.
 			} else if (SEND_BACK_STATES.has(s)) {
 				result.sendBacks.push({
 					pr: pr.number,
