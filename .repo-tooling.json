@@ -35,7 +35,9 @@
     "writtenAt": "2026-09-24T14:28:15.053Z"
   },
   "rules": {
-    "aiLoop": {},
+    "aiLoop": {
+      "agentUser": "rtorcato-bot"
+    },
     "requiredSkills": [],
     "mcp": {
       "recommended": []
