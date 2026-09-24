@@ -270,6 +270,10 @@ describe('isDocsOnly', () => {
 			'src/a.ts',
 			'.repo-ai.json',
 			'.repo-tooling.json',
+			'AGENTS.md',
+			'CLAUDE.md',
+			'packages/x/AGENTS.md',
+			'.claude/CLAUDE.md',
 		])
 			expect(isDocsOnly(['README.md', f])).toBe(false)
 		expect(isDocsOnly([])).toBe(false)

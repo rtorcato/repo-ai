@@ -147,6 +147,7 @@ export function isDocsOnly(files: string[]): boolean {
 			(f) =>
 				!f.startsWith('skills/') &&
 				!f.startsWith('.github/workflows/') &&
+				!/(^|\/)(AGENTS|CLAUDE)\.md$/.test(f) &&
 				(/\.mdx?$/.test(f) ||
 					f.startsWith('apps/docs/docs/') ||
 					f.startsWith('.github/ISSUE_TEMPLATE/'))
