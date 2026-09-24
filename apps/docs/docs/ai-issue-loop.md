@@ -274,12 +274,15 @@ These exist because the loop runs unattended against a monthly usage cap.
 ## Driving it
 
 ```
-/loop 15m /ai-issue-loop
+/loop /ai-issue-loop
 ```
 
-Ticks fire only while the REPL is idle, and a recurring `/loop` auto-expires
-after 7 days. Stop with `/loop stop`, or just remove the `ai-ready` labels — the
-loop then idles harmlessly.
+No interval: the loop paces itself. Each tick schedules the next, 10 minutes out
+while agents or reviews are in flight and 30 minutes when idle, so a quiet repo
+costs two ticks an hour. A fixed `/loop 15m /ai-issue-loop` still works.
+
+Ticks fire only while the REPL is idle. Stop by asking the session to stop the
+loop, or just remove the `ai-ready` labels — the loop then idles harmlessly.
 
 Run `/ai-issue-loop` **manually** three or four times against one trivial issue
 before letting the timer drive it.

@@ -4,7 +4,7 @@ description: |
   **The entry point for the `ai-ready` issue pipeline — start here.** Implements
   the queue in parallel, one agent per issue, each in its own git worktree,
   ending at open PRs reviewed by two agents; then registers the ai-issue-loop
-  engine on a 15-minute loop to carry those PRs through fix rounds and cleanup.
+  engine on a self-paced loop to carry those PRs through fix rounds and cleanup.
   Use when the user says "burst the queue", "run the AI pipeline", "work the
   ai-ready issues", or invokes `/ai-workflow`. Never merges. GitHub only
   (`gh`) — not GitLab.
@@ -282,7 +282,7 @@ Notes on the script, so it doesn't get "tidied" into breakage:
 ## 4. Hand over, then report
 
 The loop's next tick would hand these PRs over in Pass 1, but a human watching
-the burst beats a 15-minute tick and inherits unassigned PRs — #537 and #539
+the burst beats the next tick and inherits unassigned PRs — #537 and #539
 were merged by hand before any tick ran, never appearing in *Assigned to you*
 and still wearing a stale `ai-review`. Close that window here: once per PR
 whose two review arms both completed, apply the `ai-issue-loop` skill's Pass 1
@@ -321,13 +321,17 @@ only when there is something to babysit:
 
 - **No PRs opened** (everything `ai-blocked`, or the queue was empty) → schedule
   nothing. One line saying so.
-- **A loop is already scheduled** (check your scheduler, e.g. `CronList`, for a
-  job running `/ai-issue-loop`) → leave it alone, one line saying so. Never
+- **A loop is already running** → leave it alone, one line saying so. Never
   stack a second; two loops means two agents racing for the same `ai-wip` slots.
-- **Otherwise** → schedule `/ai-issue-loop` every 15 minutes with whatever
-  recurring mechanism is available (a `/loop 15m /ai-issue-loop` skill, a cron
-  entry). No scheduler → say the user should run `/ai-issue-loop` manually
-  after CI settles.
+  Check your scheduler (e.g. `CronList`) for a job running `/ai-issue-loop`,
+  **and** the status file: a self-paced loop schedules only its next tick, so
+  it may not appear as a job. `$ROOT/.claude/ai-loop-status` modified within the
+  last 35 minutes means a loop is live.
+- **Otherwise** → start the self-paced loop: `/loop /ai-issue-loop`, no
+  interval. Each tick paces the next itself — see the loop skill's Pass 5.
+  Without a self-paced `/loop`, fall back to a fixed `/loop 15m /ai-issue-loop`
+  or a cron entry. No scheduler → say the user should run `/ai-issue-loop`
+  manually after CI settles.
 
 Close by reporting the cadence and how to stop it, and say plainly that the loop
 will **not** merge these PRs — Pass 1 gates every `ai-ready`-derived PR to a
