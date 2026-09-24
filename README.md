@@ -41,7 +41,7 @@ One guided run: the skills, the loop labels, the agent identity, and the statusl
 | `loop comment <pr>` / `loop verdict <pr>` | Upsert the decision comment, and read a reviewer's verdict marker. |
 | `loop tick` | Compute one tick's whole work list (guard, cleanup, reap, verdicts, pickups). Writes no GitHub state. |
 
-Every command takes `--json`. Configuration lives in the repo's `.repo-tooling.json` (`rules.aiLoop`, `rules.requiredSkills`).
+Every command takes `--json`. Configuration lives in the repo's `.repo-ai.json` (`agentUser`, `requiredSkills`) — falling back to the legacy `.repo-tooling.json` `rules.aiLoop` / `rules.requiredSkills` when that file doesn't exist.
 
 ## License
 

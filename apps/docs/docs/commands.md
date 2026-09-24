@@ -7,7 +7,9 @@ description: Every repo-ai command — the loop mechanics, the doctor audit, and
 
 Every command takes `--json`. In JSON mode, diagnostics go to stderr and stdout
 carries only the result. Configuration lives in the consuming repo's
-`.repo-tooling.json`: `rules.aiLoop` and `rules.requiredSkills`.
+`.repo-ai.json`: `agentUser` and `requiredSkills`. Falls back to the legacy
+`.repo-tooling.json` `rules.aiLoop.agentUser` / `rules.requiredSkills` when
+`.repo-ai.json` doesn't exist — `doctor` flags that as drift so it gets moved.
 
 ## Setup
 

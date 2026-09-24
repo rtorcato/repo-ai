@@ -99,8 +99,9 @@ GH_CONFIG_DIR=~/.config/gh-bot gh pr review 42 --approve           # runs as the
 Complete the device flow in a private window logged in as the bot — your default
 browser will authorise *you* instead, leaving two profiles holding one identity.
 
-When `.repo-tooling.json` declares `rules.aiLoop.agentUser`, `loop guard` halts any
-tick not running as that account. `npx @rtorcato/repo-ai fix ai-loop-identity`
+When `.repo-ai.json` declares `agentUser` (or the legacy `.repo-tooling.json`
+`rules.aiLoop.agentUser`), `loop guard` halts any tick not running as that
+account. `npx @rtorcato/repo-ai fix ai-loop-identity`
 wires a checkout to it: it checks that `~/.config/gh-<agentUser>` (or
 `--gh-config-dir <path>`) is signed in as the agent, then merges
 `"env": {"GH_CONFIG_DIR": "<dir>"}` into the gitignored

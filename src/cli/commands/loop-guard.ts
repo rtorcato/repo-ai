@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process'
 import path from 'node:path'
 import chalk from 'chalk'
 import fs from 'fs-extra'
+import { readConfig } from '../../base/config.js'
 import { type GitExec, realGitExec } from '../../base/git.js'
 import { type GhExec, realGhExec } from '../../base/gh.js'
 
@@ -84,18 +85,9 @@ export function classifyRoot(insideWorkTree: string | null, gitEntry: GitEntry):
  */
 export type IdentityVerdict = 'not-configured' | 'match' | 'mismatch'
 
-const LOCKFILE = '.repo-tooling.json'
-
-/**
- * `rules.aiLoop.agentUser`, with the flat pre-v4 fallback — the same pair the
- * skill's `jq` reads. Read raw rather than through `readLockfile`, whose parser
- * requires a `record.config`: a hand-written rules-only lockfile is exactly the
- * file this has to see.
- */
+/** `.repo-ai.json`'s `agentUser`, falling back to `.repo-tooling.json` (see `base/config.ts`). */
 export async function configuredAgentUser(root: string): Promise<string | undefined> {
-	const raw = await fs.readJson(path.join(root, LOCKFILE)).catch(() => null)
-	const user = raw?.rules?.aiLoop?.agentUser ?? raw?.aiLoop?.agentUser
-	return typeof user === 'string' && user.trim() !== '' ? user.trim() : undefined
+	return (await readConfig(root)).agentUser
 }
 
 /**
@@ -111,7 +103,8 @@ export async function checkAgentIdentity(
 	if (!configured) {
 		return {
 			verdict: 'not-configured',
-			message: `no aiLoop.agentUser in ${LOCKFILE} — identity check skipped`,
+			message:
+				'no agentUser configured (.repo-ai.json, or legacy rules.aiLoop.agentUser) — identity check skipped',
 		}
 	}
 	const r = await gh(['api', 'user', '--jq', '.login'])

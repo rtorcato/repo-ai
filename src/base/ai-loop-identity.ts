@@ -1,7 +1,7 @@
 /**
  * `fix ai-loop-identity` (#638): point this checkout's Claude sessions at a gh
- * profile signed in as `rules.aiLoop.agentUser`, so `loop guard` stops halting
- * on `identity: mismatch`. `.repo-tooling.json` (committed) says *who* the agent
+ * profile signed in as `.repo-ai.json`'s `agentUser`, so `loop guard` stops
+ * halting on `identity: mismatch`. That committed file says *who* the agent
  * is; the profile path is machine-specific, so it lands in the gitignored,
  * per-checkout `.claude/settings.local.json`.
  */
@@ -31,15 +31,15 @@ export async function setupAgentIdentity(
 ): Promise<string[]> {
 	const agentUser = await configuredAgentUser(targetDir)
 	if (!agentUser) {
-		console.error('   nothing to do — no rules.aiLoop.agentUser in .repo-tooling.json')
+		console.error('   nothing to do — no agentUser configured in .repo-ai.json')
 		return []
 	}
 	// The login comes from a committed file and becomes a path segment below.
 	if (!LOGIN.test(agentUser)) {
 		throw new FixerAbort(
 			'invalid-agent-user',
-			`rules.aiLoop.agentUser "${agentUser}" is not a valid GitHub login`,
-			'Fix or remove rules.aiLoop.agentUser in .repo-tooling.json'
+			`agentUser "${agentUser}" is not a valid GitHub login`,
+			'Fix or remove agentUser in .repo-ai.json'
 		)
 	}
 	const dir = path.resolve(opts.ghConfigDir ?? defaultGhConfigDir(agentUser, opts.home))
