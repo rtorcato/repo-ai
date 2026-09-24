@@ -678,7 +678,8 @@ nothing itself.
 **Is a tick coming?** Every tick ends with a `Next tick:` line, and the statusline
 segment (`repo-ai fix statusline`) shows it: `🤖 1wip · next 9m` while the loop
 is running, `🤖 1wip · manual` when nothing is scheduled, and nothing at all
-once the last tick is over 35 minutes old.
+once the last tick is over 35 minutes old. `/ai-tick` runs one tick now and
+schedules nothing, so a running loop keeps its own wakeup.
 
 Ticks fire only while the REPL is idle. Stop by asking the session to stop the
 loop, or remove the `ai-ready` labels and let it idle. On a new repo, run

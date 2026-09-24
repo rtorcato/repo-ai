@@ -25,7 +25,8 @@ repo-side standard the loop relies on — branch protection, auto-merge, and the
 ## What it ships
 
 - **Claude Code skills** — `ai-workflow` (the entry point), `ai-loop` (the
-  engine), `ai-issue` (the on-ramp), and `ai-loop-status` (a read-only view).
+  engine), `ai-issue` (the on-ramp), `ai-loop-status` (a read-only view), and
+  `ai-tick` (one tick now).
 - **`loop` commands** — the mechanics the skills call, as tested code:
   `loop tick`, `loop guard`, `loop worktree add`, `loop reap`, and more.
 - **`doctor` / `fix`** — audit and repair the loop's own setup: labels, the agent
