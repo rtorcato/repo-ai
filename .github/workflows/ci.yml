@@ -36,7 +36,22 @@ jobs:
   # reaches npm unattended.
   release:
     needs: verify
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Only a merge that can release asks for approval: the squash subject's type
+    # is one the semantic-release preset releases on (feat, fix, perf, refactor,
+    # revert, update) or it's breaking. docs/ci/chore merges skip the job instead
+    # of queueing an approval that would publish nothing. A skipped releasable
+    # commit is not lost: the next release picks up everything since the last tag.
+    if: >-
+      github.event_name == 'push' && github.ref == 'refs/heads/main' && (
+        startsWith(github.event.head_commit.message, 'feat') ||
+        startsWith(github.event.head_commit.message, 'fix') ||
+        startsWith(github.event.head_commit.message, 'perf') ||
+        startsWith(github.event.head_commit.message, 'refactor') ||
+        startsWith(github.event.head_commit.message, 'revert') ||
+        startsWith(github.event.head_commit.message, 'update') ||
+        contains(github.event.head_commit.message, 'BREAKING CHANGE') ||
+        contains(github.event.head_commit.message, '!:')
+      )
     runs-on: ubuntu-latest
     environment: release
     permissions:
