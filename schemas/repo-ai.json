@@ -18,6 +18,12 @@
       "type": "array",
       "items": { "type": "string" },
       "description": "Skills `doctor` checks are installed, when agentUser is set. Empty or unset means no check."
+    },
+    "pollSeconds": {
+      "type": "integer",
+      "minimum": 60,
+      "default": 180,
+      "description": "Seconds between `loop watch` polls. Each poll costs several GitHub API calls against the 5,000/h limit; values below 60 are raised to 60."
     }
   }
 }

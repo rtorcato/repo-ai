@@ -17,11 +17,23 @@ export type ConfigSource = 'repo-ai.json' | 'repo-tooling.json' | 'none'
 export interface RepoAiConfig {
 	agentUser?: string
 	requiredSkills?: string[]
+	/** `loop watch`'s poll interval, floored at {@link MIN_POLL_SECONDS}. */
+	pollSeconds?: number
 	source: ConfigSource
 }
 
 function asLogin(value: unknown): string | undefined {
 	return typeof value === 'string' && value.trim() !== '' ? value.trim() : undefined
+}
+
+export const DEFAULT_POLL_SECONDS = 180
+export const MIN_POLL_SECONDS = 60
+
+// Each poll costs several GitHub API calls against the 5,000/h limit (#62).
+function asPollSeconds(value: unknown): number | undefined {
+	return typeof value === 'number' && Number.isFinite(value)
+		? Math.max(MIN_POLL_SECONDS, Math.floor(value))
+		: undefined
 }
 
 function asSkillList(value: unknown): string[] | undefined {
@@ -46,6 +58,7 @@ export async function readConfig(dir: string): Promise<RepoAiConfig> {
 		return {
 			agentUser: asLogin(own.agentUser),
 			requiredSkills: asSkillList(own.requiredSkills),
+			pollSeconds: asPollSeconds(own.pollSeconds),
 			source: 'repo-ai.json',
 		}
 	}

@@ -34,6 +34,7 @@ The skills call these; you rarely need them directly.
 | Command | What it does |
 |---|---|
 | `loop tick` | Compute one tick's whole work list (guard, cleanup, reap, verdicts, pickups). Writes no GitHub state. |
+| `loop watch` | Poll `loop tick`'s work list every `pollSeconds` and print a line only when it changes. Runs until killed. |
 | `loop guard` | Repair a wrongly-bare main checkout, gate the `node_modules` rebuild, and assert the agent identity. |
 | `loop env` | Resolve a tick's variables (root, worktree root, owner/repo, agent and human users). |
 | `loop worktree add <slug>` | Create an `ai-*` worktree off `origin/main` and link its dependencies. |
