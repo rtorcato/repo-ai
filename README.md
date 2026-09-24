@@ -30,6 +30,7 @@ This installs `ai-issue-loop`, `ai-workflow`, `ai-issue` and `ai-loop-status` in
 | `loop cleanup` | Remove `ai-*` worktrees whose PR has landed or closed. |
 | `loop reap` | Report agents stalled past 45 minutes and what to do about each. |
 | `loop comment <pr>` / `loop verdict <pr>` | Upsert the decision comment, and read a reviewer's verdict marker. |
+| `loop tick` | Compute one tick's whole work list (guard, cleanup, reap, verdicts, pickups). Writes no GitHub state. |
 
 Every command takes `--json`. Configuration lives in the repo's `.repo-tooling.json` (`rules.aiLoop`, `rules.requiredSkills`).
 
