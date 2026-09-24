@@ -46,6 +46,8 @@ const pr = (
 interface World {
 	prs?: ReturnType<typeof pr>[]
 	wip?: number[]
+	/** Closed issues still labelled ai-wip. */
+	closedWip?: number[]
 	suggested?: { number: number; updatedAt: string; labels: { name: string }[] }[]
 	queue?: unknown[]
 	merge?: Record<number, string>
@@ -90,7 +92,11 @@ function fakeGh(w: World): GhExec {
 			}
 		}
 		if (a === 'issue' && args.includes('ai-wip'))
-			return ok((w.wip ?? []).map((number) => ({ number })))
+			return ok(
+				(args.includes('closed') ? (w.closedWip ?? []) : (w.wip ?? [])).map((number) => ({
+					number,
+				}))
+			)
 		if (a === 'issue' && args.includes('ai-suggested')) return ok(w.suggested ?? [])
 		if (a === 'pr' && b === 'list') return ok(args.includes('--head') ? [] : (w.prs ?? []))
 		if (a === 'pr' && b === 'checks') {
@@ -121,6 +127,13 @@ describe('runLoopTick', () => {
 		const root = checkout(newTmpDir())
 		const r = await runLoopTick({ root, gh: fakeGh({}), env: {}, now: NOW })
 		expect(r).toMatchObject({ idle: true, summary: 'idle', exitCode: 0, errors: [] })
+	})
+
+	it('reports a closed issue still labelled ai-wip, and is not idle (#23)', async () => {
+		const root = checkout(newTmpDir())
+		const r = await runLoopTick({ root, gh: fakeGh({ closedWip: [1] }), env: {}, now: NOW })
+		expect(r.idle).toBe(false)
+		expect(r.cleaned).toEqual([expect.objectContaining({ issue: 1, action: 'relabel', path: '' })])
 	})
 
 	it('turns label state into one work list', async () => {

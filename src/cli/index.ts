@@ -161,6 +161,8 @@ loop
 	.addHelpText(
 		'after',
 		'\nWrites no GitHub state: the caller applies every label, comment and spawn.\n' +
+			'It does act locally: it removes ai-* worktrees whose PR landed or closed, so it\n' +
+			'is not a dry run. Their issues come back in `cleaned`, for the caller to relabel.\n' +
 			"Exit 1 or 2 halts the tick (loop guard's codes, or an unresolvable checkout).\n"
 	)
 	.action(loopTickCommand)

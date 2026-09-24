@@ -22,7 +22,8 @@ import { defaultWorktreeRoot, findLive } from './loop-guard.js'
  * Exit `1` only when a removal was attempted and failed.
  */
 
-export type CleanupAction = 'removed' | 'kept' | 'remove-failed'
+// 'relabel': no worktree left to remove — only the issue's ai-wip to strip (#23).
+export type CleanupAction = 'removed' | 'kept' | 'remove-failed' | 'relabel'
 
 export interface CleanupEntry {
 	path: string
