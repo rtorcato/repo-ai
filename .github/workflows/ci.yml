@@ -10,7 +10,11 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  # workflow_dispatch gets its own group suffix, separate from push runs on
+  # main: without it, cancel-in-progress below would let a manual re-dispatch
+  # cancel a push-triggered run that's already mid-publish to npm, not just
+  # one still stuck waiting on approval.
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'workflow_dispatch' && 'dispatch' || 'push' }}
   # Never cancel a push-triggered run on main: it may be halfway through
   # publishing. A manual dispatch, though, is usually a re-run to get past a
   # stale approval wait — let a newer dispatch supersede one still queued.
