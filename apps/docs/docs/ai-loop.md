@@ -109,6 +109,38 @@ wires a checkout to it: it checks that `~/.config/gh-<agentUser>` (or
 that checkout then runs as the agent, hands-on ones included — so use it on a
 checkout dedicated to the loop. It is opt-in: a bare `fix --yes` never runs it.
 
+#### Per session, with `GH_TOKEN`
+
+If the bot is already signed in to `gh` alongside you (`gh auth login` a second
+time, as the bot, adds it to the keyring), you can skip the separate config
+directory and run just the loop's session as the bot:
+
+```bash
+GH_TOKEN=$(gh auth token --user <agentUser>) claude    # this session only
+```
+
+Then start the loop as usual (`/loop /ai-loop`). `gh` and git pushes in that
+session run as the bot; every other terminal stays you. To pick up an existing
+conversation, add `--continue` or `--resume`.
+
+Either way, first:
+
+1. **Give the bot write access.** Invite it as a collaborator with `push`
+   permission and accept the invite as the bot. Read access can't push branches
+   or apply labels.
+2. **Declare it.** Put `{"agentUser": "<agentUser>"}` in `.repo-ai.json`.
+
+Once `agentUser` is set, a session running as anyone else halts every tick:
+
+```
+⚠ agentUser is <agentUser> but gh authenticates as <you> — the tick would commit, push and review as the wrong account.
+```
+
+That is the guard working. Restart the session as the bot, or remove `agentUser`
+to go back to running as yourself. The loop trusts only verdicts posted by its
+own login, so after a switch, PRs already under review are reviewed again by
+the new identity.
+
 Be clear about what this buys, because it is easy to overstate:
 
 - **Attribution** — agent reviews are visibly not you in every timeline, which no
