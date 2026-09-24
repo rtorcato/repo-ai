@@ -21,7 +21,9 @@ program
 
 program
 	.command('doctor')
-	.description('🩺 Audit the loop setup: labels, agent user, installed and required skills')
+	.description(
+		'🩺 Audit the loop setup: labels, agent user, installed and required skills, statusline'
+	)
 	.option('-d, --dir <path>', 'Repository to audit', process.cwd())
 	.option('--skills-dir <path>', 'Skills directory to check (default: ~/.claude/skills)')
 	.option('--json', 'Emit machine-readable JSON output')

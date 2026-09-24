@@ -25,10 +25,11 @@ This installs `ai-issue-loop`, `ai-workflow`, `ai-issue` and `ai-loop-status` in
 
 | Command | What it does |
 |---|---|
-| `doctor [--json]` | Audit the loop setup: label spec, `rules.aiLoop.agentUser`, installed skills, `requiredSkills`. Exits 1 only on `drift` / `missing`. |
+| `doctor [--json]` | Audit the loop setup: label spec, `rules.aiLoop.agentUser`, installed skills, `requiredSkills`, and whether your statusline shows the loop status. Exits 1 only on `drift` / `missing`. |
 | `fix labels` | Repair loop label colours and descriptions with `gh label edit`. |
 | `fix claude-skills` | Install or update the skills. `--force-skills` overwrites a modified or newer copy. |
 | `fix ai-loop-identity` | Point this checkout's Claude sessions at a `gh` profile signed in as `rules.aiLoop.agentUser`. |
+| `fix statusline` | Install the loop's status segment (`🤖 2wip·1rev`) to `~/.claude/ai-loop-statusline.sh`. Sets it as your statusline only when you have none; otherwise prints the one line to add to your own script. |
 | `loop guard` | Repair a wrongly-bare main checkout, gate the `node_modules` rebuild, and assert the agent identity. |
 | `loop env` | Resolve a tick's variables (root, worktree root, owner/repo, agent and human users). |
 | `loop worktree add <slug>` | Create an `ai-*` worktree off `origin/main` and link its dependencies. |

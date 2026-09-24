@@ -1,12 +1,18 @@
 {
 	"name": "@rtorcato/repo-ai",
 	"version": "0.1.0",
-	"description": "The ai-issue-loop pipeline — loop mechanics, Claude Code skills, and their audit — split out of @rtorcato/repo-tooling",
+	"description": "The ai-issue-loop pipeline \u2014 loop mechanics, Claude Code skills, and their audit \u2014 split out of @rtorcato/repo-tooling",
 	"type": "module",
 	"bin": {
 		"repo-ai": "./dist/cli/index.js"
 	},
-	"files": ["dist/**/*.js", "skills/*/SKILL.md", "README.md", "AGENTS.md"],
+	"files": [
+		"dist/**/*.js",
+		"skills/*/SKILL.md",
+		"README.md",
+		"AGENTS.md",
+		"statusline/*.sh"
+	],
 	"engines": {
 		"node": ">=22"
 	},
