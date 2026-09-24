@@ -2,6 +2,8 @@ import path from 'node:path'
 import { setTimeout as delay } from 'node:timers/promises'
 import chalk from 'chalk'
 import { DEFAULT_POLL_SECONDS, readConfig } from '../../base/config.js'
+import { type GhExec, realGhExec } from '../../base/gh.js'
+import { checkAgentIdentity, configuredAgentUser } from './loop-guard.js'
 import { type LoopTickResult, runLoopTick } from './loop-tick.js'
 
 /**
@@ -13,6 +15,13 @@ import { type LoopTickResult, runLoopTick } from './loop-tick.js'
  * It inherits `loop tick`'s local writes: it removes worktrees whose PR landed
  * or closed, and reports them in `cleaned` so the next tick relabels them.
  *
+ * Each line is `HH:MM  <summary>  review #78 · pickup #39 #41 …`: numbers only,
+ * never an issue or PR body — the line wakes a Claude session, and bodies are
+ * untrusted. `--json` prints the full structured work list instead.
+ *
+ * Watching writes nothing to GitHub, so an `agentUser` mismatch warns once on
+ * stderr instead of halting (#82); `loop tick` itself still halts on it.
+ *
  * Runs until killed. A halt prints once, until it clears. A poll with `errors`
  * or one that throws is skipped: a transient `gh` failure must neither kill the
  * watcher nor wake the session.
@@ -21,8 +30,10 @@ import { type LoopTickResult, runLoopTick } from './loop-tick.js'
 export interface LoopWatchOptions {
 	root?: string
 	json?: boolean
-	/** Test seams. */
-	poll?: () => Promise<LoopTickResult>
+	/** Test seams. `poll` gets the `gh` the tick would run with. */
+	poll?: (gh: GhExec) => Promise<LoopTickResult>
+	gh?: GhExec
+	now?: () => Date
 	sleep?: (ms: number) => Promise<void>
 	write?: (line: string) => void
 	/** Stop after this many polls; unset runs forever. */
@@ -47,17 +58,66 @@ export function actionable(r: LoopTickResult) {
 		verdicts: r.verdicts,
 		reviewsToSpawn: r.reviewsToSpawn,
 		fixRounds: r.fixRounds.filter((f) => f.action === 'spawn'),
+		updateBranches: r.updateBranches,
 		// Only what a free slot would take; a queue longer than the slots is not news.
 		pickups: r.pickups.slice(0, r.slots).map((p) => p.number),
 	}
 }
 
+type Work = ReturnType<typeof actionable>
+
+/** One readable line: local time, the summary, then each non-empty category by number. */
+export function describeWork(summary: string, w: Work, now: Date): string {
+	const groups: [string, (number | null)[]][] = [
+		['adopt', w.adopt],
+		['disarm', w.disarm],
+		['review', w.reviewsToSpawn.map((x) => x.pr)],
+		['verdict', w.verdicts.map((x) => x.pr)],
+		['fix', w.fixRounds.map((x) => x.pr)],
+		['update', w.updateBranches.map((x) => x.pr)],
+		['sendback', w.sendBacks.map((x) => x.pr)],
+		['handoff', w.handoffs.map((x) => x.pr)],
+		['unready', w.stripMergeReady],
+		['pickup', w.pickups],
+		['cleaned', w.cleaned.map((x) => x.issue ?? x.pr)],
+		['stalled', w.stalled.map((x) => x.pr ?? x.issue)],
+		['decay', w.decay],
+	]
+	const items = groups
+		.map(([name, ns]) => [name, [...new Set(ns.filter((n) => n !== null))]] as const)
+		.filter(([, ns]) => ns.length > 0)
+		.map(([name, ns]) => `${name} ${ns.map((n) => `#${n}`).join(' ')}`)
+	return [clock(now), summary, items.join(' · ')].filter(Boolean).join('  ')
+}
+
+const clock = (now: Date) => now.toTimeString().slice(0, 5)
+
+/**
+ * The `gh` a watch's ticks run with. On an `agentUser` mismatch it warns once
+ * and answers the login probe with `agentUser`, so the guard passes and the work
+ * list is the one the agent's own tick would act on. Every other call is real.
+ */
+export async function watchGh(root: string, gh: GhExec): Promise<GhExec> {
+	const agentUser = await configuredAgentUser(root)
+	const { verdict, message } = await checkAgentIdentity(agentUser, gh)
+	if (verdict !== 'mismatch' || !agentUser) return gh
+	console.error(
+		chalk.yellow(`${message}\n  loop watch writes nothing to GitHub, so it keeps polling.`)
+	)
+	return (args, stdin) =>
+		args.join(' ') === 'api user --jq .login'
+			? Promise.resolve({ ok: true, stdout: `${agentUser}\n`, stderr: '', code: 0 })
+			: gh(args, stdin)
+}
+
 export async function runLoopWatch(options: LoopWatchOptions = {}): Promise<void> {
 	const root = path.resolve(options.root ?? process.cwd())
-	const poll = options.poll ?? (() => runLoopTick({ root }))
+	const poll = options.poll ?? ((gh: GhExec) => runLoopTick({ root, gh }))
+	const now = options.now ?? (() => new Date())
 	const sleep = options.sleep ?? ((ms: number) => delay(ms))
 	const write = options.write ?? ((line: string) => console.log(line))
 	const seconds = (await readConfig(root)).pollSeconds ?? DEFAULT_POLL_SECONDS
+	const gh = await watchGh(root, options.gh ?? ((args, stdin) => realGhExec(args, stdin, root)))
 
 	let last = ''
 	let lastHalt: string | null = null
@@ -65,7 +125,7 @@ export async function runLoopWatch(options: LoopWatchOptions = {}): Promise<void
 		if (i > 0) await sleep(seconds * 1000)
 		let r: LoopTickResult
 		try {
-			r = await poll()
+			r = await poll(gh)
 		} catch (err) {
 			console.error(chalk.yellow(`poll failed: ${(err as Error).message}`))
 			continue
@@ -73,7 +133,9 @@ export async function runLoopWatch(options: LoopWatchOptions = {}): Promise<void
 		if (r.halt) {
 			if (r.halt !== lastHalt)
 				write(
-					options.json ? JSON.stringify({ halt: r.halt, exitCode: r.exitCode }) : `⚠halt: ${r.halt}`
+					options.json
+						? JSON.stringify({ halt: r.halt, exitCode: r.exitCode })
+						: `${clock(now())}  ⚠halt: ${r.halt}`
 				)
 			lastHalt = r.halt
 			continue
@@ -88,7 +150,11 @@ export async function runLoopWatch(options: LoopWatchOptions = {}): Promise<void
 		// Work draining away is not news; the next tick finds it gone anyway.
 		const some = Object.values(work).some((l) => l.length > 0)
 		if (print !== last && some)
-			write(options.json ? JSON.stringify({ summary: r.summary, ...work }) : r.summary)
+			write(
+				options.json
+					? JSON.stringify({ summary: r.summary, ...work })
+					: describeWork(r.summary, work, now())
+			)
 		last = print
 	}
 }

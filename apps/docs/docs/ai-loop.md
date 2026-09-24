@@ -165,11 +165,13 @@ Either way, first:
 Once `agentUser` is set, a session running as anyone else halts every tick:
 
 ```
-⚠ agentUser is <agentUser> but gh authenticates as <you> — the tick would commit, push and review as the wrong account.
+⚠ agentUser is <agentUser> but gh authenticates as <you> — the tick would commit, push and review as the wrong account. Run `npx @rtorcato/repo-ai fix ai-loop-identity` in this checkout, then relaunch the Claude session; or run just one session as the agent: `GH_TOKEN=$(gh auth token --user <agentUser>) claude`
 ```
 
-That is the guard working. Restart the session as the bot, or remove `agentUser`
-to go back to running as yourself. The loop trusts only verdicts posted by its
+That is the guard working. Restart the session as the bot, either for the whole
+checkout or [per session](#per-session-with-gh_token), or remove `agentUser` to
+go back to running as yourself. `loop watch` is the exception: it writes nothing
+to GitHub, so it prints the warning once to stderr and keeps polling. The loop trusts only verdicts posted by its
 own login, so after a switch, PRs already under review are reviewed again by
 the new identity.
 
@@ -393,7 +395,16 @@ own wakeup.
 
 **Wake on change instead.** A tick is a full LLM turn, so ticking faster costs
 more tokens. `loop watch` polls without the LLM: every `pollSeconds` it computes
-the tick's work list and prints one line only when the actionable part changes.
+the tick's work list and prints one line only when the actionable part changes:
+the local time, the tick summary, then each non-empty category by PR or issue
+number.
+
+```
+15:42  5wip·1rev  review #78 · fix #69 · update #74 · handoff #74 · pickup #39 #41 · cleaned #62 · stalled #55
+```
+
+The line never carries an issue or PR body. `--json` prints the full structured
+work list instead.
 The skill runs it through Claude Code's Monitor tool, where each line wakes the
 session for a tick, and re-arms it when the Monitor expires at 30 minutes. While
 a watcher runs, the fallback wakeup is always 30 minutes.
@@ -406,7 +417,9 @@ A poll costs what a tick's reads cost: a handful of GitHub API calls, plus a
 couple per open loop PR. At the default 180 seconds that is 20 polls an hour,
 so a repo with a few PRs in flight stays well under the 5,000/h limit. Raise
 `pollSeconds` in `.repo-ai.json` if the same token drives other automation. It
-can't go below 60. A halt prints once, and a failed poll is skipped.
+can't go below 60. A halt prints once, and a failed poll is skipped. An
+`agentUser` mismatch does not halt the watcher; see
+[Running reviewers as a second identity](#running-reviewers-as-a-second-identity).
 
 Ticks fire only while the REPL is idle. Stop by asking the session to stop the
 loop, or just remove the `ai-ready` labels — the loop then idles harmlessly.
