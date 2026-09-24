@@ -266,8 +266,10 @@ fi
 ### Pass 2 — clean up
 
 **Relabel what the tick cleaned** — `.cleaned[]`: worktrees it removed because
-the PR closed, or merged with its `(#<PR>)` squash subject on `origin/main`. It
-already ran `loop guard --removed`. For each entry's `issue`:
+the PR closed, or merged with its `(#<PR>)` squash subject on `origin/main`, plus
+`action: relabel` entries — closed issues still wearing `ai-wip` whose worktree
+an earlier, interrupted tick already removed. It already ran `loop guard
+--removed`. A tick with anything here is never `idle`. For each entry's `issue`:
 
 ```bash
 gh issue edit <N> --remove-label ai-wip ${AGENT_USER:+--remove-assignee} ${AGENT_USER:+"$AGENT_USER"} 2>/dev/null
