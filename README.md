@@ -4,7 +4,7 @@ The **ai-issue-loop** pipeline: a label-driven loop that takes an `ai-ready` Git
 
 This package holds the moving parts: the Claude Code skills, the `loop` commands they call, and a `doctor`/`fix` pair for the loop's setup. It was split out of [`@rtorcato/repo-tooling`](https://github.com/rtorcato/repo-tooling) so the tooling can be used without the loop.
 
-See [docs/ai-issue-loop.md](docs/ai-issue-loop.md) for how the pipeline works.
+See [the docs site](https://rtorcato.github.io/repo-ai/docs/ai-issue-loop) for how the pipeline works.
 
 ## Install the skills
 

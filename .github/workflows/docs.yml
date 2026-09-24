@@ -1,0 +1,23 @@
+name: 📚 Docs
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/docs/**'
+      - '.github/workflows/docs.yml'
+  # The changelog page is built from GitHub Releases, and no release commit
+  # lands on main any more (see #417) — so a push trigger alone would never
+  # rebuild the site after a release.
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  docs:
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: rtorcato/repo-tooling/.github/workflows/docs-deploy.yml@main
+    with:
+      build-filter: '@rtorcato/repo-ai-docs'

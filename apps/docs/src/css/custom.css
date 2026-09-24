@@ -1,0 +1,12 @@
+/* Site theme: the shared design tokens + this project's accent. */
+@import "./_jt-tokens.css";
+
+:root {
+	--ifm-color-primary: #2e8555;
+	--jt-accent: #2e8555;
+}
+
+[data-theme="dark"] {
+	--ifm-color-primary: #25c2a0;
+	--jt-accent: #25c2a0;
+}

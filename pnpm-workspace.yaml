@@ -1,2 +1,12 @@
+packages:
+  - 'apps/*'
+
+# core-js's postinstall is only a funding banner; esbuild/sharp (docs site) compile.
+allowBuilds:
+  core-js: false
+  core-js-pure: false
+  esbuild: true
+  sharp: true
+
 minimumReleaseAgeExclude:
   - '@rtorcato/repo-tooling@3.44.0'
