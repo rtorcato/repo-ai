@@ -93,8 +93,13 @@ argument.
 
    ```bash
    STATUS="$ROOT/.claude/ai-loop-status"
-   [ -f "$STATUS" ] && echo "last tick $(( ($(date +%s) - $(stat -f %m "$STATUS" 2>/dev/null || stat -c %Y "$STATUS")) / 60 ))m ago"
+   [ -f "$STATUS" ] && echo "last tick $(( ($(date +%s) - $(stat -c %Y "$STATUS" 2>/dev/null || stat -f %m "$STATUS")) / 60 ))m ago"
+   NEXT=$(sed -n 3p "$STATUS" 2>/dev/null)   # epoch seconds; empty = nothing scheduled
    ```
+
+   Line 3 is when the next tick is due. Report it as `next tick in Nm`,
+   `next tick overdue` (due but the REPL has been busy), or, when it is
+   empty, `no tick scheduled — the last one was run by hand`.
 
 6. **Verify the merge gate only when something looks stuck** — skip these on a
    healthy run, they are noise:
@@ -114,7 +119,7 @@ argument.
    ```
    ai-issue-loop — <repo> — <date>
 
-   Schedule: self-paced, last tick 8m ago   (or: every 15m, or: NOT SCHEDULED)
+   Schedule: self-paced, last tick 8m ago, next tick in 2m   (or: no tick scheduled, or: NOT RUNNING)
 
    In flight (2/6 slots):
      #41  add a --json flag to doctor        PR #58  ai-review, waiting on security-expert

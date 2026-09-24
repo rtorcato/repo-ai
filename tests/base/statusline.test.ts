@@ -22,10 +22,26 @@ describe('statusline/ai-loop.sh', () => {
 			stdio: ['ignore', 'pipe', 'pipe'],
 		})
 
-	it('prints the summary from a fresh status file', () => {
+	const status = (dir: string, text: string) =>
+		fs.outputFileSync(join(dir, '.claude', 'ai-loop-status'), text)
+	const inSeconds = (s: number) => Math.floor(Date.now() / 1000) + s
+
+	it('says "manual" when no next tick is recorded (#21)', () => {
 		const dir = newTmpDir()
-		fs.outputFileSync(join(dir, '.claude', 'ai-loop-status'), '2wip·1rev\n12,14\n')
-		expect(run(dir)).toBe('🤖 2wip·1rev')
+		status(dir, '2wip·1rev\n12,14\n')
+		expect(run(dir)).toBe('🤖 2wip·1rev · manual')
+	})
+
+	it('counts down to the next tick', () => {
+		const dir = newTmpDir()
+		status(dir, `2wip·1rev\n\n${inSeconds(9 * 60)}\n`)
+		expect(run(dir)).toBe('🤖 2wip·1rev · next 9m')
+	})
+
+	it('says the tick is due once its time has passed', () => {
+		const dir = newTmpDir()
+		status(dir, `idle\n\n${inSeconds(-120)}\n`)
+		expect(run(dir)).toBe('🤖 idle · tick due')
 	})
 
 	it('prints nothing once the status is older than 35 minutes', () => {
