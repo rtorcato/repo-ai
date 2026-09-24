@@ -283,6 +283,12 @@ No interval: the loop paces itself. Each tick schedules the next, 10 minutes out
 while agents or reviews are in flight and 30 minutes when idle, so a quiet repo
 costs two ticks an hour. A fixed `/loop 15m /ai-issue-loop` still works.
 
+**Is a tick coming?** Every tick ends with a `Next tick:` line, and the
+statusline segment (`npx @rtorcato/repo-ai fix statusline`) shows it:
+`🤖 1wip · next 9m` while the loop runs, `🤖 1wip · manual` after a tick you ran
+by hand, and nothing once the last tick is over 35 minutes old. `/ai-loop-status`
+reports the same.
+
 Ticks fire only while the REPL is idle. Stop by asking the session to stop the
 loop, or just remove the `ai-ready` labels — the loop then idles harmlessly.
 

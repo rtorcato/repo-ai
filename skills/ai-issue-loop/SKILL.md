@@ -625,33 +625,40 @@ osascript -e "display notification \"$SUMMARY\" with title \"ai-issue-loop\" sub
   || notify-send "ai-issue-loop" "$OWNER_REPO: $SUMMARY" 2>/dev/null || true
 ```
 
-Write the status file **last**. Its age is the liveness signal: ticks run at
-most 30 minutes apart, so a file older than about 35 minutes means the loop has
-stopped, and a statusline should hide it past that.
+**Decide the next tick.** How this tick was started decides it — never whether
+the `ScheduleWakeup` tool happens to be available, which it is in ordinary
+sessions too:
+
+| Started by | `DELAY` (seconds) |
+|---|---|
+| Self-paced `/loop /ai-issue-loop` (no interval) | `1800` when `SUMMARY` is `idle` — a new `ai-ready` issue can wait half an hour — else `600`: agents in flight, reviews pending, or a PR waiting |
+| Fixed `/loop <interval> /ai-issue-loop` | that interval, in seconds; `/loop` schedules it |
+| A plain `/ai-issue-loop` | empty — nothing is scheduled |
+
+Write the status file **last** — `SUMMARY`, `SUGGESTED`, and when the next tick
+is due (empty when none). Its age is the liveness signal: ticks run at most 30
+minutes apart, so a file older than about 35 minutes means the loop has stopped,
+and a statusline should hide it past that. The third line is what lets a
+statusline say `next 9m` or `manual` instead of leaving you to guess:
 
 ```bash
-printf '%s\n%s\n' "$SUMMARY" "$SUGGESTED" > "$STATUS"
+NEXT=${DELAY:+$(( $(date +%s) + DELAY ))}
+printf '%s\n%s\n%s\n' "$SUMMARY" "$SUGGESTED" "$NEXT" > "$STATUS"
 ```
 
 Print `SUMMARY` plus at most five lines — handed over, cleaned up, sent to
 review, picked up, blocked — marking handoffs carrying `ai-notes`, and any
 `.errors`. Then print `$DIGEST`, unless `$SUGGESTED` is empty or equals
-`$PREV_SUGGESTED`.
+`$PREV_SUGGESTED`. **End with exactly one line saying what happens next:**
+`Next tick: in 10m (self-paced)`, `Next tick: in 15m (/loop)`, or
+`Next tick: none scheduled — run /ai-issue-loop, or /loop /ai-issue-loop to keep it going`.
 
-**Pace the next tick — last, and only under a self-paced `/loop`** (the
-`ScheduleWakeup` tool is available). A manual `/ai-issue-loop` or a fixed-interval
-`/loop` schedules nothing. Call `ScheduleWakeup` with `prompt: "/ai-issue-loop"`
-and:
-
-| This tick | `delaySeconds` | Why |
-|---|---|---|
-| `SUMMARY` is `idle` | `1800` | Nothing to watch; a new `ai-ready` issue can wait half an hour. |
-| Anything else | `600` | Agents in flight, reviews pending, or a PR waiting — check back sooner. |
-
-`noop: true` when `SUMMARY` == `PREV`, else `false`, so quiet stretches collapse
-in the terminal. `reason` is one line naming what the next tick is for, e.g.
-`2 reviews and 1 implementer in flight`. Never stop the loop from here — an idle
-loop is cheap, and a stopped one misses the next `ai-ready` issue.
+**Then, only under a self-paced `/loop`, schedule it** — `ScheduleWakeup` with
+`prompt: "/ai-issue-loop"`, `delaySeconds: $DELAY`, `noop: true` when `SUMMARY`
+== `PREV` (else `false`, so quiet stretches collapse in the terminal), and a
+one-line `reason` naming what the next tick is for, e.g. `2 reviews and 1
+implementer in flight`. Never stop the loop from here — an idle loop is cheap,
+and a stopped one misses the next `ai-ready` issue.
 
 ---
 
@@ -663,7 +670,13 @@ loop is cheap, and a stopped one misses the next `ai-ready` issue.
 
 No interval: the loop is self-paced. Each tick's Pass 5 schedules the next one,
 10 minutes out while work is in flight and 30 minutes when idle. A fixed
-`/loop 15m /ai-issue-loop` still works; Pass 5 just skips the pacing step.
+`/loop 15m /ai-issue-loop` still works; Pass 5 records its interval but schedules
+nothing itself.
+
+**Is a tick coming?** Every tick ends with a `Next tick:` line, and the statusline
+segment (`repo-ai fix statusline`) shows it: `🤖 1wip · next 9m` while the loop
+is running, `🤖 1wip · manual` when nothing is scheduled, and nothing at all
+once the last tick is over 35 minutes old.
 
 Ticks fire only while the REPL is idle. Stop by asking the session to stop the
 loop, or remove the `ai-ready` labels and let it idle. On a new repo, run
