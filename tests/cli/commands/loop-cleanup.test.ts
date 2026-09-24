@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process'
 import { join } from 'node:path'
 import fs from 'fs-extra'
 import { describe, expect, it } from 'vitest'
-import type { GhExec } from '../../../src/base/github-settings.js'
+import type { GhExec } from '../../../src/base/gh.js'
 import { runLoopCleanup } from '../../../src/cli/commands/loop-cleanup.js'
 import { useTmpDir } from '../../helpers/tmp-dir.js'
 

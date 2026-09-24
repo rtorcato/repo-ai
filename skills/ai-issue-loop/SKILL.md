@@ -117,8 +117,8 @@ Bootstrap only — `gh label create` **cannot repair a label that already
 exists**. To repair colour/description drift:
 
 ```bash
-npx @rtorcato/repo-tooling doctor --json   # "AI loop labels" reports colour/description drift
-npx @rtorcato/repo-tooling fix labels      # repairs it with `gh label edit`
+npx @rtorcato/repo-ai doctor --json   # "AI loop labels" reports colour/description drift
+npx @rtorcato/repo-ai fix labels      # repairs it with `gh label edit`
 ```
 
 Also once per repo, keep the status file out of git:
@@ -217,7 +217,7 @@ exported `GIT_DIR` / `GIT_WORK_TREE`.
 
 ```bash
 # Exit 0 continue; 1 = bare repair failed, 2 = root unrepairable or wrong gh identity.
-npx @rtorcato/repo-tooling loop guard --root "$ROOT" || exit 1
+npx @rtorcato/repo-ai loop guard --root "$ROOT" || exit 1
 ```
 
 **A non-zero exit halts the whole tick, not the command.** The `exit 1` only
@@ -671,7 +671,7 @@ Run it once more, after every removal above and before Pass 4 branches new
 worktrees off `ROOT`:
 
 ```bash
-GUARD=$(npx @rtorcato/repo-tooling loop guard --root "$ROOT" ${REMOVED:+--removed} --json) || exit 1
+GUARD=$(npx @rtorcato/repo-ai loop guard --root "$ROOT" ${REMOVED:+--removed} --json) || exit 1
 printf '%s' "$GUARD" | jq -r '.messages[]'
 REBUILD=$(printf '%s' "$GUARD" | jq -r .rebuild)
 ```

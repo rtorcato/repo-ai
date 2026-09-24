@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import path, { join } from 'node:path'
 import fs from 'fs-extra'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { GhExec, GhResult } from '../../src/base/github-settings.js'
+import type { GhExec, GhResult } from '../../src/base/gh.js'
 import { applyLoopLabels, checkLoopLabels, LOOP_LABELS } from '../../src/base/labels.js'
 import { useTmpDir } from '../helpers/tmp-dir.js'
 

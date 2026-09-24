@@ -9,24 +9,16 @@ import { createHash } from 'node:crypto'
 import os from 'node:os'
 import path from 'node:path'
 import fs from 'fs-extra'
-import { realGitExec } from '../../base/git-identity.js'
-import { getPackageRoot } from '../utils/copy-preset.js'
+import { realGitExec } from '../../base/git.js'
+import { getPackageRoot } from '../utils/package-root.js'
 import { shellQuote } from '../utils/shell.js'
 import { type GitExec, isNewerVersion, resolveShippedVersion } from '../utils/version.js'
 
 /**
  * Skills this package owns the content of and keeps up to date. The loop first —
- * it is the pipeline; the next three are its drivers (burst, on-ramp, status).
- * `dogfood` stands apart: it tests the consuming repo's own tooling rather than
- * driving the loop, and it is the only one that writes nothing outside a temp dir.
+ * it is the pipeline; the other three are its drivers (burst, on-ramp, status).
  */
-export const SHIPPED_SKILLS = [
-	'ai-issue-loop',
-	'ai-workflow',
-	'ai-issue',
-	'ai-loop-status',
-	'dogfood',
-]
+export const SHIPPED_SKILLS = ['ai-issue-loop', 'ai-workflow', 'ai-issue', 'ai-loop-status']
 
 /** The primary skill — the default everywhere a single name is accepted. */
 export const SHIPPED_SKILL = 'ai-issue-loop'
@@ -37,7 +29,7 @@ export const SHIPPED_SKILL = 'ai-issue-loop'
  * on different versions overwrite each other's skill on every `fix`, and neither
  * is wrong to do so.
  */
-export const VERSION_KEY = 'repo-tooling-version'
+export const VERSION_KEY = 'repo-ai-version'
 
 /**
  * The pristine sha256 of the content we wrote, stamped beside the version — the
@@ -50,7 +42,7 @@ export const VERSION_KEY = 'repo-tooling-version'
  * It lives in the file instead of `.repo-tooling.json` because skills are
  * user-global — no one repo owns the record.
  */
-export const HASH_KEY = 'repo-tooling-hash'
+export const HASH_KEY = 'repo-ai-hash'
 
 const STAMP_KEYS = [VERSION_KEY, HASH_KEY]
 

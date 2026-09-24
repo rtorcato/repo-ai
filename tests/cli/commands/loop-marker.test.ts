@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { GhExec } from '../../../src/base/github-settings.js'
+import type { GhExec } from '../../../src/base/gh.js'
 import { runLoopComment, runLoopVerdict } from '../../../src/cli/commands/loop-marker.js'
 
 const M = '<!-- ai-issue-loop:decision -->'

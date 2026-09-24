@@ -1,7 +1,7 @@
 import path from 'node:path'
 import chalk from 'chalk'
 import fs from 'fs-extra'
-import { type GhExec, realGhExec } from './github-settings.js'
+import { type GhExec, realGhExec } from './gh.js'
 import type { CheckResult } from './types.js'
 
 /**
@@ -169,7 +169,7 @@ export async function checkLoopLabels(dir: string, exec?: GhExec): Promise<Check
 			check: CHECK,
 			status: 'drift',
 			detail: deltas.join('; '),
-			hint: 'Run `npx @rtorcato/repo-tooling fix labels` to repair them with `gh label edit` — `gh label create` cannot change an existing label, which is how this drifted',
+			hint: 'Run `npx @rtorcato/repo-ai fix labels` to repair them with `gh label edit` — `gh label create` cannot change an existing label, which is how this drifted',
 		}
 	return {
 		check: CHECK,

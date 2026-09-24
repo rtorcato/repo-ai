@@ -11,8 +11,8 @@ import {
 	REBUILD_ARGS,
 	runLoopGuard,
 } from '../../../src/cli/commands/loop-guard.js'
-import type { GitExec } from '../../../src/base/git-identity.js'
-import type { GhExec } from '../../../src/base/github-settings.js'
+import type { GitExec } from '../../../src/base/git.js'
+import type { GhExec } from '../../../src/base/gh.js'
 import { useTmpDir } from '../../helpers/tmp-dir.js'
 
 /**

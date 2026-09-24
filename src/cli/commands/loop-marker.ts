@@ -1,6 +1,6 @@
 import path from 'node:path'
 import fs from 'fs-extra'
-import { type GhExec, realGhExec } from '../../base/github-settings.js'
+import { type GhExec, realGhExec } from '../../base/gh.js'
 import { ghOut } from './loop-env.js'
 
 /**

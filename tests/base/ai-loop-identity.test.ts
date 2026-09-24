@@ -2,7 +2,7 @@ import { join } from 'node:path'
 import fs from 'fs-extra'
 import { describe, expect, it, vi } from 'vitest'
 import { type GhEnvExec, setupAgentIdentity } from '../../src/base/ai-loop-identity.js'
-import { FixerAbort } from '../../src/base/fixers.js'
+import { FixerAbort } from '../../src/base/fixer-abort.js'
 import { useTmpDir } from '../helpers/tmp-dir.js'
 
 const newTmpDir = useTmpDir()

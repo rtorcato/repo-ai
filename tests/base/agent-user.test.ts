@@ -2,7 +2,7 @@ import { join } from 'node:path'
 import fs from 'fs-extra'
 import { describe, expect, it, vi } from 'vitest'
 import { checkAgentUser } from '../../src/base/agent-user.js'
-import type { GhExec, GhResult } from '../../src/base/github-settings.js'
+import type { GhExec, GhResult } from '../../src/base/gh.js'
 import { useTmpDir } from '../helpers/tmp-dir.js'
 
 const newTmpDir = useTmpDir()

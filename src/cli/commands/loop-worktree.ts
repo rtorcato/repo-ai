@@ -1,7 +1,7 @@
 import path from 'node:path'
 import chalk from 'chalk'
 import fs from 'fs-extra'
-import { type GitExec, realGitExec } from '../../base/git-identity.js'
+import { type GitExec, realGitExec } from '../../base/git.js'
 import { defaultWorktreeRoot } from './loop-guard.js'
 
 /**

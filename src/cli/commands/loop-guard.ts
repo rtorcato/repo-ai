@@ -2,8 +2,8 @@ import { spawn } from 'node:child_process'
 import path from 'node:path'
 import chalk from 'chalk'
 import fs from 'fs-extra'
-import { type GitExec, realGitExec } from '../../base/git-identity.js'
-import { type GhExec, realGhExec } from '../../base/github-settings.js'
+import { type GitExec, realGitExec } from '../../base/git.js'
+import { type GhExec, realGhExec } from '../../base/gh.js'
 
 /**
  * `repo-tooling loop guard` — the most dangerous mechanics of the
@@ -127,7 +127,7 @@ export async function checkAgentIdentity(
 		verdict: 'mismatch',
 		message: `⚠ agentUser is ${configured} but gh authenticates as ${
 			effective || '(gh could not say — unauthenticated or missing)'
-		} — the tick would commit, push and review as the wrong account. Run \`npx @rtorcato/repo-tooling fix ai-loop-identity\` in this checkout, then relaunch the Claude session`,
+		} — the tick would commit, push and review as the wrong account. Run \`npx @rtorcato/repo-ai fix ai-loop-identity\` in this checkout, then relaunch the Claude session`,
 	}
 }
 

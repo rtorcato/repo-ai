@@ -7,14 +7,14 @@ description: The end-to-end label-driven pipeline that turns an ai-ready GitHub 
 `ai-ready`, implements it in a per-issue git worktree, opens a PR, has two agents
 review it, and hands it to you to merge. It runs unattended on a timer.
 
-`repo-tooling` ships it as an agent skill and owns every repo-side piece it
-depends on — the branch-protection standard, the `.claude/settings.json`
-worktree config, and the skill itself.
+`repo-ai` ships the skill and its `loop` commands. The repo-side pieces it
+relies on — the branch-protection standard and the `.claude/settings.json`
+worktree config — come from [`@rtorcato/repo-tooling`](https://github.com/rtorcato/repo-tooling).
 
 ## Install it
 
 ```bash
-npx @rtorcato/repo-tooling fix claude-skills
+npx @rtorcato/repo-ai fix claude-skills
 ```
 
 That writes `~/.claude/skills/ai-issue-loop/SKILL.md`. Unlike every other fixer
@@ -34,11 +34,11 @@ Four things follow from that:
   rest of your Claude config. The CLI reports the resolved real path so you know
   what to commit.
 - **The install refuses to downgrade.** Each installed copy carries a
-  `repo-tooling-version` stamp in its frontmatter. A repo pinned to an older
+  `repo-ai-version` stamp in its frontmatter. A repo pinned to an older
   release reports and skips rather than overwriting a newer skill — otherwise
   two repos on different versions would fight over it on every `fix`.
 - **The install refuses to overwrite a local fork.** Alongside the version, each
-  copy carries a `repo-tooling-hash` of the content we wrote. If the installed
+  copy carries a `repo-ai-hash` of the content we wrote. If the installed
   file no longer matches that hash — or predates it, so nothing can be proven —
   the install prints what diverged and stops, the same rule
   [`fix copied-assets`](./cli.md) follows for copied presets. This is the case
@@ -52,7 +52,7 @@ Any agent that reads the [`skills`](https://www.npmjs.com/package/skills) CLI
 format can also take it straight from GitHub:
 
 ```bash
-npx skills add https://github.com/rtorcato/repo-tooling --skill ai-issue-loop
+npx skills add https://github.com/rtorcato/repo-ai --skill ai-issue-loop
 ```
 
 ## The one constraint
@@ -94,7 +94,7 @@ Complete the device flow in a private window logged in as the bot — your defau
 browser will authorise *you* instead, leaving two profiles holding one identity.
 
 When `.repo-tooling.json` declares `rules.aiLoop.agentUser`, `loop guard` halts any
-tick not running as that account. `npx @rtorcato/repo-tooling fix ai-loop-identity`
+tick not running as that account. `npx @rtorcato/repo-ai fix ai-loop-identity`
 wires a checkout to it: it checks that `~/.config/gh-<agentUser>` (or
 `--gh-config-dir <path>`) is signed in as the agent, then merges
 `"env": {"GH_CONFIG_DIR": "<dir>"}` into the gitignored

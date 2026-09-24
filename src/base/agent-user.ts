@@ -1,6 +1,6 @@
 import path from 'node:path'
 import fs from 'fs-extra'
-import { type GhExec, realGhExec } from './github-settings.js'
+import { type GhExec, realGhExec } from './gh.js'
 import type { CheckResult } from './types.js'
 
 /**

@@ -1,6 +1,6 @@
 import path from 'node:path'
 import chalk from 'chalk'
-import { type GhExec, realGhExec } from '../../base/github-settings.js'
+import { type GhExec, realGhExec } from '../../base/gh.js'
 import { defaultWorktreeRoot, findLive } from './loop-guard.js'
 
 /**

@@ -1,0 +1,2 @@
+minimumReleaseAgeExclude:
+  - '@rtorcato/repo-tooling@3.44.0'

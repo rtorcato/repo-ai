@@ -9,8 +9,8 @@ import path from 'node:path'
 import fs from 'fs-extra'
 import { configuredAgentUser } from '../cli/commands/loop-guard.js'
 import { LOGIN } from './agent-user.js'
-import { FixerAbort } from './fixers.js'
-import { type GhResult, realGhExec } from './github-settings.js'
+import { FixerAbort } from './fixer-abort.js'
+import { type GhResult, realGhExec } from './gh.js'
 
 export const SETTINGS_LOCAL = '.claude/settings.local.json'
 

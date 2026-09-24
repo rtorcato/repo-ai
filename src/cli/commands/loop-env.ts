@@ -1,7 +1,7 @@
 import path from 'node:path'
 import { LOGIN } from '../../base/agent-user.js'
-import { type GitExec, realGitExec } from '../../base/git-identity.js'
-import { type GhExec, realGhExec } from '../../base/github-settings.js'
+import { type GitExec, realGitExec } from '../../base/git.js'
+import { type GhExec, realGhExec } from '../../base/gh.js'
 import { configuredAgentUser, defaultWorktreeRoot } from './loop-guard.js'
 
 /**
