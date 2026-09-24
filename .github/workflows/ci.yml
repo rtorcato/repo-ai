@@ -33,6 +33,24 @@ jobs:
       - run: pnpm run typecheck
       - run: pnpm test --run
       - run: pnpm run build
+      # Run the package as npm would ship it, not as it sits in the repo: pack,
+      # check the non-code files made it in, install the tarball somewhere
+      # clean, and invoke the bin.
+      - name: Smoke-test the packed tarball
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          npm pack --pack-destination "$tmp"
+          tarball="$(ls "$tmp"/*.tgz)"
+          tar -tzf "$tarball" > "$tmp/files.txt"
+          for f in skills/*/SKILL.md statusline/ai-loop.sh; do
+            grep -qx "package/$f" "$tmp/files.txt" || { echo "::error::$f missing from tarball"; exit 1; }
+          done
+          cd "$tmp"
+          npm init -y > /dev/null
+          npm install --no-audit --no-fund "$tarball"
+          npx --no-install repo-ai --version
+          npx --no-install repo-ai doctor --json | node -e 'JSON.parse(require("fs").readFileSync(0, "utf8"))'
 
   # Publishes @rtorcato/repo-ai with semantic-release. The `release`
   # environment requires a maintainer's approval, so a merge to main never
