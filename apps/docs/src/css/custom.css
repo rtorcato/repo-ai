@@ -1,12 +1,96 @@
-/* Site theme: the shared design tokens + this project's accent. */
-@import "./_jt-tokens.css";
+/**
+ * repo-ai — Docusaurus theme.
+ *
+ * Pink accent (#db2777 light / #f472b6 dark — the family accent in
+ * @rtorcato/shared-docs) over the shared @rtorcato base: _jt-tokens.css for
+ * the fonts and surfaces, theme.css for the component styling (refresh both
+ * with `repo-tooling copy docusaurus-theme-tokens` / `docusaurus-theme`).
+ */
 
+@import "./_jt-tokens.css";
+@import "./theme.css";
+
+/* ---------- Light (default) ---------- */
 :root {
-	--ifm-color-primary: #2e8555;
-	--jt-accent: #2e8555;
+	--ifm-color-primary: #db2777;
+	--ifm-color-primary-dark: #c5236b;
+	--ifm-color-primary-darker: #ba2165;
+	--ifm-color-primary-darkest: #991b53;
+	--ifm-color-primary-light: #e03d86;
+	--ifm-color-primary-lighter: #e2488d;
+	--ifm-color-primary-lightest: #e769a1;
+	--ifm-link-color: #db2777;
+	--docusaurus-highlighted-code-line-bg: rgba(219, 39, 119, 0.1);
+
+	--jt-accent: #db2777;
+	--jt-accent-fill: #db2777;
+	--jt-accent-soft: rgba(219, 39, 119, 0.1);
+	--jt-accent-border: rgba(219, 39, 119, 0.4);
 }
 
+/* ---------- Dark ---------- */
 [data-theme="dark"] {
-	--ifm-color-primary: #25c2a0;
-	--jt-accent: #25c2a0;
+	--ifm-color-primary: #f472b6;
+	--ifm-color-primary-dark: #f15aa8;
+	--ifm-color-primary-darker: #f04ea1;
+	--ifm-color-primary-darkest: #ea1f8a;
+	--ifm-color-primary-light: #f78ac4;
+	--ifm-color-primary-lighter: #f896cb;
+	--ifm-color-primary-lightest: #fab0d6;
+	--ifm-link-color: #f472b6;
+	--docusaurus-highlighted-code-line-bg: rgba(244, 114, 182, 0.14);
+
+	--jt-accent: #f472b6;
+	--jt-accent-fill: #f472b6;
+	--jt-accent-soft: rgba(244, 114, 182, 0.14);
+	--jt-accent-border: rgba(244, 114, 182, 0.34);
+}
+
+::selection {
+	background: rgba(219, 39, 119, 0.24);
+}
+
+/* ---------- Mobile drawer: one flat menu ----------
+   Pairs with the swizzled theme/Navbar/MobileSidebar/{Primary,Secondary}Menu
+   (same pattern as repo-tooling's site). Docusaurus flips to its "secondary"
+   menu on doc pages, which slides the primary one off screen — lock it. */
+.navbar-sidebar__items,
+.navbar-sidebar__items.navbar-sidebar__items--show-secondary {
+	transform: translate3d(0, 0, 0) !important;
+}
+.navbar-sidebar__items > .navbar-sidebar__item:nth-child(2),
+.navbar-sidebar__back {
+	display: none !important;
+}
+.jt-mobile-menu {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	padding: 4px 0;
+	margin: 0;
+	list-style: none;
+}
+.jt-mobile-menu__link {
+	display: block;
+	padding: 12px 14px;
+	border-radius: 8px;
+	color: var(--jt-heading);
+	font-weight: 600;
+	font-size: 15px;
+	text-decoration: none;
+}
+.jt-mobile-menu__link:hover,
+.jt-mobile-menu__link:focus-visible {
+	background: var(--jt-surface2);
+	color: var(--jt-heading);
+	text-decoration: none;
+}
+.jt-mobile-menu__link--active {
+	background: var(--jt-accent-soft);
+	color: var(--jt-accent);
+}
+.jt-mobile-menu__external::after {
+	content: " ↗";
+	color: var(--jt-faint);
+	font-weight: 400;
 }

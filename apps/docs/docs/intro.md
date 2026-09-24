@@ -1,20 +1,42 @@
 ---
-title: repo-ai
+title: Introduction
 slug: /
 sidebar_position: 0
+description: What repo-ai is, what it ships, and where to start.
 ---
 
 # repo-ai
 
-[![CI](https://github.com/rtorcato/repo-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/rtorcato/repo-ai/actions/workflows/ci.yml)
-[![npm version](https://img.shields.io/npm/v/@rtorcato/repo-ai)](https://www.npmjs.com/package/@rtorcato/repo-ai)
-[![npm downloads](https://img.shields.io/npm/dm/@rtorcato/repo-ai)](https://www.npmjs.com/package/@rtorcato/repo-ai)
-[![Bundle size](https://img.shields.io/bundlephobia/minzip/@rtorcato/repo-ai)](https://bundlephobia.com/package/@rtorcato/repo-ai)
-[![Coverage](https://codecov.io/gh/rtorcato/repo-ai/branch/main/graph/badge.svg)](https://codecov.io/gh/rtorcato/repo-ai)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+`@rtorcato/repo-ai` is the **ai-issue-loop** pipeline: a label-driven loop that
+takes an `ai-ready` GitHub issue, implements it in its own git worktree, opens a
+PR, has two agents review it, and hands it to a human to merge.
 
-The ai-issue-loop pipeline — loop mechanics, Claude Code skills, and their audit — split out of @rtorcato/repo-tooling
+It was split out of [`@rtorcato/repo-tooling`](https://rtorcato.github.io/repo-tooling/)
+so the tooling can be used without the loop. repo-tooling still owns the
+repo-side standard the loop relies on — branch protection, auto-merge, and the
+`.claude/settings.json` worktree config.
 
-Welcome to the docs. Edit `apps/docs/docs/intro.md` to get started, and add
-more markdown files under `apps/docs/docs/` — they appear in the sidebar
-automatically.
+## What it ships
+
+- **Claude Code skills** — `ai-workflow` (the entry point), `ai-issue-loop` (the
+  engine), `ai-issue` (the on-ramp), and `ai-loop-status` (a read-only view).
+- **`loop` commands** — the mechanics the skills call, as tested code:
+  `loop tick`, `loop guard`, `loop worktree add`, `loop reap`, and more.
+- **`doctor` / `fix`** — audit and repair the loop's own setup: labels, the agent
+  user, and the installed skills.
+
+Every command takes `--json`.
+
+## Start here
+
+1. Install the skills: `npx @rtorcato/repo-ai fix claude-skills`.
+2. Check the repo meets the [prerequisites](./ai-issue-loop.md#repo-prerequisites).
+3. File an issue with `/ai-issue`, then run `/ai-workflow` in Claude Code.
+
+:::note Pre-release
+`@rtorcato/repo-ai` is not on npm yet. Until the first release, run the CLI from a
+clone: `pnpm install && pnpm build && node dist/cli/index.js <command>`.
+:::
+
+Read [The AI Issue Loop](./ai-issue-loop.md) for how the pipeline works, and
+[Commands](./commands.md) for every command.
