@@ -210,10 +210,28 @@ that state, so a missed tick, a crash, or a restart costs nothing.
 | `ai-reviewing-sec` | PR | `security-expert` claimed and running. Cleared with its verdict. |
 | `ai-ok-code` | PR | `code-reviewer` passed. In-flight only — the handoff strips it. |
 | `ai-ok-sec` | PR | `security-expert` passed. In-flight only — the handoff strips it. |
-| `ai-changes` | PR | A reviewer requested changes, or Pass 1 sent the PR back over red CI. |
+| `ai-changes` | PR | A reviewer requested changes, or Pass 1 sent the PR back: a required check failed, or the PR is `DIRTY` (conflicts) or `BLOCKED` by a ruleset. On a PR opened by hand, with no loop worktree, it waits for you instead of a fixer. |
 | `ai-fixing` | PR | Fix-round implementer claimed and running. Cleared with its push. |
 | `ai-notes` | PR | Passed, but a reviewer left something to read before merging. |
 | `merge-ready` | PR | Both agent reviews passed and the PR is mergeable — waiting on a human. Supersedes the `ai-ok-*` pair rather than joining it. |
+| `ai-suggested` | issue | A follow-up a reviewer filed. A triage queue: never picked up automatically. Add `ai-ready` to queue it; closed after 30 days untouched. |
+
+### What you'll see on a PR
+
+A PR moves through a few label combinations. Read them as "whose turn is it":
+
+| Labels | What's happening | Whose turn |
+|---|---|---|
+| `ai-review` | Opened, waiting for reviewers to start | the loop |
+| `ai-review` `ai-reviewing-code` `ai-reviewing-sec` | Both reviewers are running (a docs-only PR gets one combined reviewer that claims both) | the reviewers |
+| `ai-review` `ai-ok-code` `ai-reviewing-sec` | Code review passed; security review still running (either order) | the reviewers |
+| `ai-review` `ai-ok-code` `ai-ok-sec` | Both passed; waiting for CI to go green, or for the branch to be updated from `main` | the loop |
+| `ai-changes` | A reviewer asked for a change, or CI failed | the loop (a fixer is next) |
+| `ai-changes` `ai-fixing` | A fixer is pushing a fix; both reviews run again afterwards | the fixer |
+| `merge-ready` | Reviewed, green, mergeable | **you** |
+| `merge-ready` `ai-notes` | Same, but read the reviewer's `### Before merging` first | **you** |
+
+A claim label (`ai-reviewing-*`, `ai-fixing`) that sits for 45 minutes means its agent died; the next tick clears it and starts over.
 
 A PR handed over for you to merge therefore carries exactly one of two label
 sets, and the difference is legible without opening anything:
