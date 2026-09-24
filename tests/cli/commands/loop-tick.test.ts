@@ -305,8 +305,25 @@ describe('isDocsOnly', () => {
 			'CLAUDE.md',
 			'packages/x/AGENTS.md',
 			'.claude/CLAUDE.md',
+			'CLAUDE.local.md',
+			'docs/GEMINI.md',
+			'.cursorrules',
+			'.cursor/rules/x.md',
+			'a/.claude/commands/x.md',
+			'.github/copilot-instructions.md',
+			'.windsurfrules',
+			'.github/instructions/x.instructions.md',
 		])
 			expect(isDocsOnly(['README.md', f])).toBe(false)
+		// Whole path segments only: ordinary docs stay docs-only.
+		for (const f of [
+			'apps/docs/docs/intro.md',
+			'docs/claude-code.md',
+			'README.md',
+			'notes-about-CLAUDE.md',
+			'docs/AGENTS.md.bak.md',
+		])
+			expect(isDocsOnly([f])).toBe(true)
 		expect(isDocsOnly([])).toBe(false)
 	})
 })
