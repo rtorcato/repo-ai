@@ -16,6 +16,12 @@ so the tooling can be used without the loop. repo-tooling still owns the
 repo-side standard the loop relies on — branch protection, auto-merge, and the
 `.claude/settings.json` worktree config.
 
+:::warning
+
+**Costs and liability.** By installing or using repo-ai, you accept these risks and responsibilities. repo-ai runs AI agents unattended, and they spend your Anthropic credits or plan limits and your GitHub Actions minutes. The loop's limits are best-effort, not a spending guarantee. Set spend limits with your provider, and stop the loop when you aren't watching it. Agents can be wrong, so you review and merge every change. Provided as is under the MIT license, with no warranty; the authors aren't liable for costs, damages or changes made by agents. Not affiliated with Anthropic or GitHub. Read the full [Risks and responsibilities](./risks.md).
+
+:::
+
 ## What it ships
 
 - **Claude Code skills** — `ai-workflow` (the entry point), `ai-issue-loop` (the
