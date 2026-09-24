@@ -392,9 +392,17 @@ Reviewer prompt template:
 >
 > The verdict must agree with the labels you apply; a later tick reads it back if
 > you die before labelling. The body **must end** with `### Before merging` and
-> either findings that change what a human would do at merge time, one bullet
-> each, or `Nothing.` — the common verdict. ≤600 characters above it; narrate
-> only where the PR is **wrong** or **silent**, never what you found clean.
+> either findings that change whether or how a human should merge — a semver
+> implication, a deliberate omission, a risky migration, a decision only a human
+> can make — one bullet each, or `Nothing.` — the common verdict. ≤600
+> characters above it; narrate only where the PR is **wrong** or **silent**,
+> never what you found clean.
+>
+> **An open question you couldn't settle from the diff is not a finding.** If it
+> matters, settle it with a read-only check you're allowed to run (e.g. `gh
+> api`); otherwise pass with `Nothing.`, or file an `ai-suggested` issue (below)
+> when later work is actually needed. Never write a note that concludes "no
+> action needed" — that is `Nothing.`.
 >
 > **Later work is an issue you file, not that section** — never "optional" or
 > "non-blocking" there:
