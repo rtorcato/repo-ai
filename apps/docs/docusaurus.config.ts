@@ -6,7 +6,7 @@ const config: Config = {
 	title: 'repo-ai',
 	tagline:
 		'The ai-issue-loop pipeline — loop mechanics, Claude Code skills, and their audit — split out of @rtorcato/repo-tooling',
-	favicon: 'img/favicon.ico',
+	favicon: 'img/favicon.svg',
 
 	url: 'https://rtorcato.github.io',
 	baseUrl: '/repo-ai/',
@@ -60,6 +60,7 @@ const config: Config = {
 	],
 
 	themeConfig: {
+		image: 'img/social-card.png',
 		colorMode: {
 			defaultMode: 'dark',
 			respectPrefersColorScheme: true,
