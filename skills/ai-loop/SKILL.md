@@ -497,40 +497,13 @@ unclaimed for the next tick, which lists them again. A claim with no task behind
 it would sit until `loop reap` times it out.
 
 ```
-Workflow({args: {reviews: [{label, agentType, prompt}, …], fixes: [{label, prompt}, …]}, script: …})
+Workflow({name: 'ai-loop-pass3', args: {reviews: [{label, agentType, prompt}, …], fixes: [{label, prompt}, …]}})
 ```
 
-```js
-export const meta = {
-	name: 'ai-loop-pass3',
-	description: "Run one tick's claimed reviewers and fixers; each labels and comments its own PR",
-	phases: [{ title: 'Review' }, { title: 'Fix' }],
-}
-
-const VERDICT = {
-	type: 'object',
-	properties: {
-		verdict: { enum: ['PASS', 'PASS-NOTES', 'CHANGES'] },
-		summary: { type: 'string' },
-	},
-	required: ['verdict', 'summary'],
-}
-const FIXED = {
-	type: 'object',
-	properties: { pushed: { type: 'boolean' }, summary: { type: 'string' } },
-	required: ['pushed', 'summary'],
-}
-
-const tasks = [
-	...args.fixes.map((f) => () => agent(f.prompt, { label: f.label, phase: 'Fix', schema: FIXED })),
-	...args.reviews.map((r) => () =>
-		agent(r.prompt, { label: r.label, phase: 'Review', schema: VERDICT, agentType: r.agentType })
-	),
-]
-const results = await parallel(tasks)
-const labels = [...args.fixes, ...args.reviews].map((t) => t.label)
-return labels.map((label, i) => ({ label, result: results[i] }))
-```
+The script is `workflows/ai-loop-pass3.js` in this package, installed to
+`~/.claude/workflows/` by `fix claude-skills` alongside this skill. Run it by name;
+if `Workflow` reports no workflow by that name, run
+`npx @rtorcato/repo-ai fix claude-skills` and call it again.
 
 Launch it and **do not wait** — go on to Pass 4. Notes, so it doesn't get
 "tidied" into breakage:

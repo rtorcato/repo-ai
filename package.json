@@ -9,6 +9,7 @@
 	"files": [
 		"dist/**/*.js",
 		"skills/*/SKILL.md",
+		"workflows/*.js",
 		"schemas/*.json",
 		"README.md",
 		"AGENTS.md",

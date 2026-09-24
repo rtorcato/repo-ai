@@ -1,4 +1,12 @@
 {
   "$schema": "https://biomejs.dev/schemas/latest/schema.json",
-  "extends": ["@rtorcato/repo-tooling/biome"]
+  "extends": ["@rtorcato/repo-tooling/biome"],
+  "overrides": [
+    {
+      "includes": ["workflows/**"],
+      "linter": { "enabled": false },
+      "formatter": { "enabled": false },
+      "assist": { "enabled": false }
+    }
+  ]
 }

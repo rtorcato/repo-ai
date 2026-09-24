@@ -1,9 +1,11 @@
 import {
 	claudeSkillStatus,
+	resolveSkillsDir,
 	SHIPPED_SKILLS,
 	skillDiffCommand,
 	type SkillStatus,
 } from '../cli/generators/claude-skills.js'
+import { installWorkflow, SHIPPED_WORKFLOWS, workflowsDirFor } from '../cli/generators/workflows.js'
 import type { CheckResult } from './types.js'
 
 /**
@@ -160,4 +162,57 @@ export async function checkRequiredSkills(
 		}
 	}
 	return { check, status: 'optional-missing', detail: parts.join('; '), hint }
+}
+
+/**
+ * The Workflow scripts the skills run by name (#40): does the installed copy
+ * match the one this package ships? Same severity rule as `checkClaudeSkills`
+ * — it probes `~/.claude`, not the repo — and the same fork courtesy: a copy
+ * `fix` would refuse to overwrite is named, never nagged.
+ */
+export async function checkWorkflows(skillsDir?: string): Promise<CheckResult> {
+	const check = 'Claude workflows'
+	const hint = `Run \`npx @rtorcato/repo-ai fix claude-skills\` to install the ${SHIPPED_WORKFLOWS.join(', ')} workflows`
+	const { dir } = await resolveSkillsDir(skillsDir)
+	if (!dir) {
+		return {
+			check,
+			status: 'optional-missing',
+			detail: 'no ~/.claude/skills to install beside',
+			hint,
+		}
+	}
+	const statuses = []
+	for (const name of SHIPPED_WORKFLOWS) {
+		statuses.push(await installWorkflow(workflowsDirFor(dir), name, { dryRun: true }))
+	}
+	const stale = statuses.filter((s) => s.status === 'installed' || s.status === 'updated')
+	if (stale.length > 0) {
+		const detail = stale
+			.map((s) =>
+				s.status === 'installed'
+					? `${s.name} not installed`
+					: `${s.name} differs from the ${s.shippedVersion} this package ships`
+			)
+			.join('; ')
+		return { check, status: 'optional-missing', detail, hint }
+	}
+	const forks = statuses.filter((s) => s.status === 'declined-fork')
+	if (forks.length > 0) {
+		return {
+			check,
+			status: 'ok',
+			detail: forks
+				.map(
+					(s) => `${s.name} at ${s.file} matches no version this package shipped; not overwritten`
+				)
+				.join('; '),
+			hint: `Diff against the shipped copy — ${forks.map((s) => `\`${skillDiffCommand({ realFile: s.file, shippedFile: s.shippedFile })}\``).join(', ')} — then \`fix claude-skills --force-skills\` to take it`,
+		}
+	}
+	return {
+		check,
+		status: 'ok',
+		detail: `${SHIPPED_WORKFLOWS.length} workflows match what this package ships`,
+	}
 }

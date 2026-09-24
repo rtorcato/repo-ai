@@ -2,7 +2,7 @@ import os from 'node:os'
 import path from 'node:path'
 import chalk from 'chalk'
 import { checkAgentUser } from '../../base/agent-user.js'
-import { checkClaudeSkills, checkRequiredSkills } from '../../base/checks.js'
+import { checkClaudeSkills, checkRequiredSkills, checkWorkflows } from '../../base/checks.js'
 import { CONFIG_FILE, readConfig } from '../../base/config.js'
 import { checkConfigSchema } from '../../base/config-schema.js'
 import { checkLoopLabels } from '../../base/labels.js'
@@ -20,6 +20,7 @@ export async function runDoctor(dir: string, skillsDir?: string): Promise<CheckR
 		await checkLoopLabels(dir),
 		await checkAgentUser(dir, config.agentUser),
 		await checkClaudeSkills(skillsDir),
+		await checkWorkflows(skillsDir),
 		await checkStatusline(os.homedir()),
 	]
 	const schemaCheck = await checkConfigSchema(dir)
