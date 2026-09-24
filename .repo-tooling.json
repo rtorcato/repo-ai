@@ -1,0 +1,44 @@
+{
+  "$schema": "https://rtorcato.github.io/repo-tooling/schemas/lockfile.json",
+  "version": 4,
+  "record": {
+    "config": {
+      "projectName": "@rtorcato/repo-ai",
+      "projectType": "library",
+      "typescript": {
+        "enabled": true,
+        "config": "base"
+      },
+      "linting": {
+        "tool": "biome",
+        "eslintConfig": "base"
+      },
+      "formatting": {
+        "tool": "biome"
+      },
+      "testing": {
+        "framework": "vitest",
+        "environment": "node"
+      },
+      "gitHooks": true,
+      "commitLint": true,
+      "semanticRelease": true,
+      "securityAutomation": true,
+      "bundler": "none"
+    },
+    "assets": {
+      "docusaurus-sync-changelog": "de05aecb200657c2023dc3540dbdd2f9f2f17f1027e67a06266119d12cc05fea",
+      "docusaurus-theme-tokens": "5db6a5e34b2042faa3f11f3601ec4991581fc7bc34eccee05047322d0bc27664"
+    },
+    "writtenBy": "@rtorcato/repo-tooling@3.44.0",
+    "writtenAt": "2026-09-24T13:50:56.498Z"
+  },
+  "rules": {
+    "aiLoop": {},
+    "requiredSkills": [],
+    "mcp": {
+      "recommended": []
+    },
+    "exceptions": {}
+  }
+}

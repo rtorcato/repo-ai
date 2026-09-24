@@ -6,4 +6,4 @@ import { stripAmbientGitEnv } from './scripts/lib/git-env.mjs'
 // redirect it into this repo. See the helper for the full failure mode.
 stripAmbientGitEnv()
 
-export default mergeConfig(base, defineConfig({}))
+export default mergeConfig(base, defineConfig({ test: { include: ['tests/**/*.test.ts'] } }))
