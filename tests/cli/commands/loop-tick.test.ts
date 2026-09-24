@@ -312,6 +312,8 @@ describe('isDocsOnly', () => {
 			'a/.claude/commands/x.md',
 			'.github/copilot-instructions.md',
 			'.windsurfrules',
+			'.windsurf/rules/x.md',
+			'packages/x/.Windsurf/rules/x.md',
 			'.github/instructions/x.instructions.md',
 		])
 			expect(isDocsOnly(['README.md', f])).toBe(false)
@@ -319,6 +321,7 @@ describe('isDocsOnly', () => {
 		for (const f of [
 			'apps/docs/docs/intro.md',
 			'docs/claude-code.md',
+			'docs/windsurf.md',
 			'README.md',
 			'notes-about-CLAUDE.md',
 			'docs/AGENTS.md.bak.md',

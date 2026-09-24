@@ -145,7 +145,7 @@ interface RestIssue {
 // Files an agent reads as instructions, at any depth, as whole path segments: never docs (#72, #80).
 // Case-insensitive because agents load `agents.md` on case-insensitive filesystems; a docs page of that name gets the full review, the safe direction.
 const AGENT_INSTRUCTIONS =
-	/(^|\/)((AGENTS|CLAUDE(\.local)?|GEMINI|copilot-instructions)\.md|\.cursorrules|\.windsurfrules)$|(^|\/)(\.cursor|\.claude|\.github\/instructions)\//i
+	/(^|\/)((AGENTS|CLAUDE(\.local)?|GEMINI|copilot-instructions)\.md|\.cursorrules|\.windsurfrules)$|(^|\/)(\.cursor|\.windsurf|\.claude|\.github\/instructions)\//i
 
 export function isDocsOnly(files: string[]): boolean {
 	return (
