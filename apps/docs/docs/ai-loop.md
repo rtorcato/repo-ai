@@ -303,7 +303,7 @@ Passes run cheapest first, so a quiet repo exits fast.
 | Pass | Does |
 |---|---|
 | **0 — orient** | Resolve the main checkout, fetch, list open PRs and `ai-wip` issues. Adopt unlabelled PRs — Dependabot's, and any the loop's own identity opened with the `🤖` header. Bail to Pass 5 with `idle` only if there is nothing at all: no labelled PR, no eligible issue, and no leftover worktree. |
-| **1 — merge** | Auto-merge only *Dependabot* PRs that passed both reviews. Hand every other ready PR to you as `merge-ready`, dropping `ai-review` and both `ai-ok-*`. Send back anything GitHub reports as not `CLEAN`, or with a required check red. |
+| **1 — merge** | Auto-merge only *Dependabot* PRs that passed both reviews. Hand every other ready PR to you as `merge-ready`, dropping `ai-review` and both `ai-ok-*`. Update a `BEHIND` branch with `gh pr update-branch`, keeping the reviews; wait on required checks still pending. Send back anything else GitHub reports as not `CLEAN`, or with a required check red. |
 | **2 — clean up** | Remove worktrees whose PR merged (confirming the squash is on `main` first), then reap stalls. |
 | **3 — review** | Queue the missing reviewers for `ai-review` PRs and a fix round for each `ai-changes` PR, then run them all in one Workflow (at most 8 agents) with typed verdicts. The agents still write the labels and verdict markers. |
 | **4 — pick up** | Claim eligible `ai-ready` issues, create the worktree, spawn an implementer. |
@@ -325,6 +325,11 @@ Three details worth knowing because they fail *silently* when got wrong:
 - **Pass 2 confirms the squash landed on `main`** before removing anything. A
   squash-merged branch always looks like it has unmerged commits, which is
   indistinguishable from work that was never merged at all.
+
+**The merge ripple.** Under strict required checks, every merge makes the other
+passed PRs `BEHIND`. Pass 1 updates each branch rather than spending a fixer on
+it, but each update re-runs CI and delays that handoff by a tick. A merge queue,
+or merging the ready PRs in quick succession, avoids the ripple.
 
 ## Limits
 

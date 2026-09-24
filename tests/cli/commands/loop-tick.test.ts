@@ -52,6 +52,8 @@ interface World {
 	queue?: unknown[]
 	merge?: Record<number, string>
 	failing?: number[]
+	/** PRs whose required checks are still running. */
+	pending?: number[]
 	/** PR → [arm, verdict] markers posted on the current head. */
 	reviews?: Record<number, [string, string][]>
 	changes?: Record<number, number>
@@ -102,10 +104,18 @@ function fakeGh(w: World): GhExec {
 		if (a === 'issue' && args.includes('ai-suggested')) return ok(w.suggested ?? [])
 		if (a === 'pr' && b === 'list') return ok(args.includes('--head') ? [] : (w.prs ?? []))
 		if (a === 'pr' && b === 'checks') {
-			const failing = w.failing?.includes(Number(args[2]))
+			const n = Number(args[2])
+			const failing = w.failing?.includes(n)
+			const pending = w.pending?.includes(n)
 			return {
-				ok: !failing,
-				stdout: JSON.stringify(failing ? [{ name: 'test', state: 'FAILURE', link: 'l' }] : []),
+				ok: !failing && !pending,
+				stdout: JSON.stringify(
+					failing
+						? [{ name: 'test', state: 'FAILURE', bucket: 'fail', link: 'l' }]
+						: pending
+							? [{ name: 'test', state: 'IN_PROGRESS', bucket: 'pending', link: 'l' }]
+							: []
+				),
 				stderr: '',
 			}
 		}
@@ -201,8 +211,8 @@ describe('runLoopTick', () => {
 		expect(r.exitCode).toBe(0)
 		expect(r.errors).toEqual([])
 		expect(r.handoffs).toEqual([{ pr: 10, issue: 1, notes: true, autoMerge: false }])
+		expect(r.updateBranches).toEqual([{ pr: 11, issue: 2 }])
 		expect(r.sendBacks).toEqual([
-			{ pr: 11, issue: 2, reason: 'BEHIND', failing: [] },
 			{ pr: 12, issue: 3, reason: 'ci-red', failing: [{ name: 'test', link: 'l' }] },
 		])
 		expect(r.disarm).toEqual([13])
@@ -223,6 +233,27 @@ describe('runLoopTick', () => {
 		expect(r.slots).toBe(3)
 		expect(r.idle).toBe(false)
 		expect(r.summary).toBe('⚠1blocked·⚠1ci-red·4wip·6rev·1ready')
+	})
+
+	it('waits on a BLOCKED PR whose required checks are still pending', async () => {
+		const root = checkout(newTmpDir())
+		const r = await runLoopTick({
+			root,
+			env: {},
+			now: NOW,
+			gh: fakeGh({
+				wip: [1, 2],
+				prs: [
+					pr(10, 'ai-1-pending', ['ai-review', 'ai-ok-code', 'ai-ok-sec']),
+					pr(11, 'ai-2-ruleset', ['merge-ready']),
+				],
+				merge: { 10: 'BLOCKED', 11: 'BLOCKED' },
+				pending: [10],
+			}),
+		})
+		expect(r.errors).toEqual([])
+		expect(r.updateBranches).toEqual([])
+		expect(r.sendBacks).toEqual([{ pr: 11, issue: 2, reason: 'BLOCKED', failing: [] }])
 	})
 
 	it('spawns one combined reviewer for a docs-only PR (#53)', async () => {
