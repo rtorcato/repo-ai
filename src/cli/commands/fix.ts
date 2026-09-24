@@ -3,6 +3,7 @@ import path from 'node:path'
 import chalk from 'chalk'
 import inquirer from 'inquirer'
 import { setupAgentIdentity } from '../../base/ai-loop-identity.js'
+import { writeConfigSchema } from '../../base/config-schema.js'
 import { FixerAbort } from '../../base/fixer-abort.js'
 import { applyLoopLabels } from '../../base/labels.js'
 import { installStatusline } from '../../base/statusline.js'
@@ -34,6 +35,11 @@ export interface Fixer {
 }
 
 export const FIXERS = {
+	config: {
+		description:
+			'Write $schema into .repo-ai.json, creating it (seeded from legacy .repo-tooling.json) when missing',
+		run: (dir) => writeConfigSchema(dir),
+	},
 	labels: {
 		description: 'Repair ai-loop label colours and descriptions on GitHub via `gh label edit`',
 		run: (dir) => applyLoopLabels(dir),

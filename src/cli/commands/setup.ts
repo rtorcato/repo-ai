@@ -27,6 +27,7 @@ export interface StepResult {
 }
 
 const STEPS: Record<string, StepRun> = {
+	config: FIXERS.config.run,
 	'claude-skills': FIXERS['claude-skills'].run,
 	labels: (dir) => applyLoopLabels(dir, undefined, { bootstrap: true }),
 	'ai-loop-identity': FIXERS['ai-loop-identity'].run,
@@ -35,7 +36,13 @@ const STEPS: Record<string, StepRun> = {
 
 /** The steps, in order. The identity step only means something with an agent user. */
 export function setupSteps(agentUser: string | null | undefined): string[] {
-	return ['claude-skills', 'labels', ...(agentUser ? ['ai-loop-identity'] : []), 'statusline']
+	return [
+		'config',
+		'claude-skills',
+		'labels',
+		...(agentUser ? ['ai-loop-identity'] : []),
+		'statusline',
+	]
 }
 
 export async function runSetup(

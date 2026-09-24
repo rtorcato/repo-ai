@@ -4,6 +4,7 @@ import chalk from 'chalk'
 import { checkAgentUser } from '../../base/agent-user.js'
 import { checkClaudeSkills, checkRequiredSkills } from '../../base/checks.js'
 import { CONFIG_FILE, readConfig } from '../../base/config.js'
+import { checkConfigSchema } from '../../base/config-schema.js'
 import { checkLoopLabels } from '../../base/labels.js'
 import { checkStatusline } from '../../base/statusline.js'
 import type { CheckResult } from '../../base/types.js'
@@ -21,6 +22,8 @@ export async function runDoctor(dir: string, skillsDir?: string): Promise<CheckR
 		await checkClaudeSkills(skillsDir),
 		await checkStatusline(os.homedir()),
 	]
+	const schemaCheck = await checkConfigSchema(dir)
+	if (schemaCheck) results.push(schemaCheck)
 	if (config.source === 'repo-tooling.json') {
 		results.push({
 			check: 'Loop config',
