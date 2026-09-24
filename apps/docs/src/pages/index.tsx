@@ -202,10 +202,6 @@ function Hero(): ReactElement {
 							Commands
 						</Link>
 					</div>
-					<p className={styles.note}>
-						Pre-release: <code>@rtorcato/repo-ai</code> is not on npm yet — run it from a clone
-						until the first release.
-					</p>
 				</div>
 			</div>
 		</header>
