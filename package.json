@@ -59,6 +59,17 @@
 		"type": "git",
 		"url": "https://github.com/rtorcato/repo-ai.git"
 	},
+	"homepage": "https://rtorcato.github.io/repo-ai/",
+	"bugs": {
+		"url": "https://github.com/rtorcato/repo-ai/issues"
+	},
+	"keywords": [
+		"ai-agents",
+		"claude-code",
+		"cli",
+		"developer-tools",
+		"github-automation"
+	],
 	"license": "MIT",
 	"author": "Richard Torcato"
 }
