@@ -5,6 +5,9 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  # "Run workflow" on main releases from its tip, whatever the last merge's type
+  # — for when merges landed close together and the queue skipped a release.
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -45,14 +48,15 @@ jobs:
     # mentioned them. A skipped releasable commit is not lost: the next release
     # picks up everything since the last tag.
     if: >-
-      github.event_name == 'push' && github.ref == 'refs/heads/main' && (
+      github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'push' && (
         startsWith(github.event.head_commit.message, 'feat') ||
         startsWith(github.event.head_commit.message, 'fix') ||
         startsWith(github.event.head_commit.message, 'perf') ||
         startsWith(github.event.head_commit.message, 'refactor') ||
         startsWith(github.event.head_commit.message, 'revert') ||
         startsWith(github.event.head_commit.message, 'update')
-      )
+      ))
     runs-on: ubuntu-latest
     environment: release
     permissions:
