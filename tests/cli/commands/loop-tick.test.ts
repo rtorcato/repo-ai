@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import fs from 'fs-extra'
 import { describe, expect, it } from 'vitest'
 import type { GhExec } from '../../../src/base/gh.js'
-import { runLoopTick } from '../../../src/cli/commands/loop-tick.js'
+import { isDocsOnly, runLoopTick } from '../../../src/cli/commands/loop-tick.js'
 import { useTmpDir } from '../../helpers/tmp-dir.js'
 
 const newTmpDir = useTmpDir()
@@ -55,6 +55,8 @@ interface World {
 	/** PR → [arm, verdict] markers posted on the current head. */
 	reviews?: Record<number, [string, string][]>
 	changes?: Record<number, number>
+	/** PR → `gh pr diff --name-only`. */
+	diffs?: Record<number, string[]>
 }
 
 function fakeGh(w: World): GhExec {
@@ -106,6 +108,10 @@ function fakeGh(w: World): GhExec {
 				stdout: JSON.stringify(failing ? [{ name: 'test', state: 'FAILURE', link: 'l' }] : []),
 				stderr: '',
 			}
+		}
+		if (a === 'pr' && b === 'diff') {
+			const files = w.diffs?.[Number(args[2])]
+			return files ? ok(`${files.join('\n')}\n`) : { ok: false, stdout: '', stderr: 'no diff' }
 		}
 		if (a === 'pr' && b === 'view') {
 			if (args.includes('headRefOid')) return ok('head\n')
@@ -217,5 +223,59 @@ describe('runLoopTick', () => {
 		expect(r.slots).toBe(3)
 		expect(r.idle).toBe(false)
 		expect(r.summary).toBe('⚠1blocked·⚠1ci-red·4wip·6rev·1ready')
+	})
+
+	it('spawns one combined reviewer for a docs-only PR (#53)', async () => {
+		const root = checkout(newTmpDir())
+		const r = await runLoopTick({
+			root,
+			env: {},
+			now: NOW,
+			gh: fakeGh({
+				wip: [1, 2, 3],
+				prs: [
+					pr(20, 'ai-1-docs', ['ai-review']),
+					pr(21, 'ai-2-mixed', ['ai-review']),
+					pr(22, 'ai-3-unreadable', ['ai-review']),
+				],
+				diffs: {
+					20: ['README.md', 'apps/docs/docs/guide.mdx', '.github/ISSUE_TEMPLATE/bug.yml'],
+					21: ['README.md', 'src/index.ts'],
+				},
+			}),
+		})
+		expect(r.reviewsToSpawn).toEqual([
+			{ pr: 20, issue: 1, arm: 'both' },
+			{ pr: 21, issue: 2, arm: 'code' },
+			{ pr: 21, issue: 2, arm: 'sec' },
+			{ pr: 22, issue: 3, arm: 'code' },
+			{ pr: 22, issue: 3, arm: 'sec' },
+		])
+		expect(r.summary).toBe('3wip·3rev·1saved')
+	})
+})
+
+describe('isDocsOnly', () => {
+	it('takes markdown, docs pages and templates', () => {
+		expect(isDocsOnly(['a/b.md', 'x.mdx', '.github/PULL_REQUEST_TEMPLATE.md'])).toBe(true)
+		expect(isDocsOnly(['apps/docs/docs/a.ts', '.github/ISSUE_TEMPLATE/config.yml'])).toBe(true)
+	})
+
+	it('fails closed on anything that runs or steers an agent', () => {
+		for (const f of [
+			'skills/ai-loop/SKILL.md',
+			'.github/workflows/ci.yml',
+			'package.json',
+			'pnpm-lock.yaml',
+			'src/a.ts',
+			'.repo-ai.json',
+			'.repo-tooling.json',
+			'AGENTS.md',
+			'CLAUDE.md',
+			'packages/x/AGENTS.md',
+			'.claude/CLAUDE.md',
+		])
+			expect(isDocsOnly(['README.md', f])).toBe(false)
+		expect(isDocsOnly([])).toBe(false)
 	})
 })

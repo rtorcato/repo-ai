@@ -93,7 +93,8 @@ export interface LoopTickResult {
 	decay: number[]
 	/** Pass 3 — a posted verdict to adopt instead of re-spawning. */
 	verdicts: { pr: number; arm: Arm; verdict: Verdict }[]
-	reviewsToSpawn: { pr: number; issue: number | null; arm: Arm }[]
+	/** `both` — a docs-only PR: one reviewer with both lenses, posting both markers (#53). */
+	reviewsToSpawn: { pr: number; issue: number | null; arm: Arm | 'both' }[]
 	fixRounds: FixRound[]
 	/** Pass 4 — free slots, and every eligible issue in queue order. */
 	slots: number
@@ -132,6 +133,26 @@ interface RestIssue {
 	pull_request?: unknown
 	labels: { name: string }[]
 	author_association: string
+}
+
+/**
+ * Docs-only: nothing in the diff runs, so one reviewer covers both arms (#53).
+ * Skills and workflows are `.md`/YAML an agent or runner acts on, so never docs.
+ * An empty or unreadable file list fails closed to the full review.
+ */
+export function isDocsOnly(files: string[]): boolean {
+	return (
+		files.length > 0 &&
+		files.every(
+			(f) =>
+				!f.startsWith('skills/') &&
+				!f.startsWith('.github/workflows/') &&
+				!/(^|\/)(AGENTS|CLAUDE)\.md$/.test(f) &&
+				(/\.mdx?$/.test(f) ||
+					f.startsWith('apps/docs/docs/') ||
+					f.startsWith('.github/ISSUE_TEMPLATE/'))
+		)
+	)
 }
 
 const issueOf = (head: string) => Number(head.match(/^(?:worktree-)?ai-(\d+)-/)?.[1]) || null
@@ -220,6 +241,12 @@ export async function runLoopTick(options: LoopTickOptions = {}): Promise<LoopTi
 		}
 		errors.push(`gh ${args.slice(0, 3).join(' ')} failed: ${r.stderr.trim()}`)
 		return null
+	}
+
+	// From the diff's file list, never the title, labels or body.
+	const docsOnly = async (n: number) => {
+		const r = await gh(['pr', 'diff', String(n), '--name-only'])
+		return r.ok && isDocsOnly(r.stdout.split('\n').filter(Boolean))
 	}
 
 	// A closed issue still wearing ai-wip: its worktree is already gone, so no
@@ -368,7 +395,9 @@ export async function runLoopTick(options: LoopTickOptions = {}): Promise<LoopTi
 				} else spawn.push(arm)
 			}
 			// A CHANGES about to be applied sends the PR back; a review now is wasted.
-			if (!changes)
+			if (!changes && spawn.length === ARMS.length && (await docsOnly(pr.number)))
+				result.reviewsToSpawn.push({ pr: pr.number, issue, arm: 'both' })
+			else if (!changes)
 				for (const arm of spawn) result.reviewsToSpawn.push({ pr: pr.number, issue, arm })
 		}
 
@@ -468,6 +497,7 @@ export function summarize(r: LoopTickResult, inFlight: number, loopPrs: number):
 	const ciRed = r.sendBacks.filter((s) => s.reason === 'ci-red').length + r.dependabotCiRed.length
 	const wip = inFlight + Math.min(r.slots, r.pickups.length)
 	const ready = r.handoffs.length
+	const saved = r.reviewsToSpawn.filter((s) => s.arm === 'both').length
 	const segments: [number | boolean, string][] = [
 		[r.errors.length > 0, '⚠error'],
 		[blocked, `⚠${blocked}blocked`],
@@ -476,6 +506,8 @@ export function summarize(r: LoopTickResult, inFlight: number, loopPrs: number):
 		[wip, `${wip}wip`],
 		[loopPrs - ready, `${loopPrs - ready}rev`],
 		[ready, `${ready}ready`],
+		// Reviewer agents not spawned: one combined review instead of two.
+		[saved, `${saved}saved`],
 	]
 	return (
 		segments
