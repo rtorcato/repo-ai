@@ -9,6 +9,7 @@ import { loopGuardCommand } from './commands/loop-guard.js'
 import { loopCommentCommand, loopVerdictCommand } from './commands/loop-marker.js'
 import { loopReapCommand } from './commands/loop-reap.js'
 import { loopTickCommand } from './commands/loop-tick.js'
+import { loopWatchCommand } from './commands/loop-watch.js'
 import { loopWorktreeAddCommand } from './commands/loop-worktree.js'
 import { setupCommand } from './commands/setup.js'
 import { getToolVersion } from './utils/version.js'
@@ -166,5 +167,19 @@ loop
 			"Exit 1 or 2 halts the tick (loop guard's codes, or an unresolvable checkout).\n"
 	)
 	.action(loopTickCommand)
+
+loop
+	.command('watch')
+	.description("👀 Poll the tick's work list; print a line only when it changes")
+	.option('--root <path>', 'Main checkout, or any worktree of it', process.cwd())
+	.option('--json', 'Emit machine-readable JSON output')
+	.addHelpText(
+		'after',
+		'\nPolls every `pollSeconds` from .repo-ai.json (default 180, floor 60) until killed.\n' +
+			'Prints one line when the actionable work list changes, and a halt once until it\n' +
+			'clears. Failed polls go to stderr and are skipped. Like `loop tick`, it removes\n' +
+			'ai-* worktrees whose PR landed or closed, and reports them in `cleaned`.\n'
+	)
+	.action(loopWatchCommand)
 
 await program.parseAsync()

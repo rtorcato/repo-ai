@@ -26,6 +26,11 @@ describe('validateConfig', () => {
 			'"requiredSkills" must contain only string items',
 		])
 		expect(validateConfig([])).toEqual(['must be an object, got array'])
+		expect(validateConfig({ pollSeconds: 90.5 })).toEqual([
+			'"pollSeconds" must be integer, got number',
+		])
+		expect(validateConfig({ pollSeconds: 30 })).toEqual(['"pollSeconds" must be at least 60'])
+		expect(validateConfig({ pollSeconds: 120 })).toEqual([])
 	})
 })
 

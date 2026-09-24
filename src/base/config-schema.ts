@@ -1,12 +1,11 @@
 /**
  * `.repo-ai.json` against the shipped `schemas/repo-ai.json` (#67). The schema
  * is the single source of truth for the key list; this checks the subset of
- * JSON Schema it uses — top-level `type` per property, `items.type` for
- * arrays, and `additionalProperties: false` — so the package needs no
- * validator dependency.
+ * JSON Schema it uses — top-level `type` per property (`integer` included),
+ * `minimum`, `items.type` for arrays, and `additionalProperties: false` — so
+ * the package needs no validator dependency.
  *
- * ponytail: no `integer`/`minimum`/`enum` support — add it with the first
- * property that uses one (e.g. #62's `pollSeconds`).
+ * ponytail: no `enum` support — add it with the first property that uses one.
  */
 import path from 'node:path'
 import fs from 'fs-extra'
@@ -16,6 +15,7 @@ import type { CheckResult } from './types.js'
 
 interface PropertySchema {
 	type: string
+	minimum?: number
 	items?: { type: string }
 }
 
@@ -42,9 +42,13 @@ export function validateConfig(value: unknown): string[] {
 			errors.push(`unknown key "${key}"`)
 			continue
 		}
-		if (typeOf(v) !== prop.type) {
-			errors.push(`"${key}" must be ${prop.type}, got ${typeOf(v)}`)
+		const type = prop.type === 'integer' && Number.isInteger(v) ? 'integer' : typeOf(v)
+		if (type !== prop.type) {
+			errors.push(`"${key}" must be ${prop.type}, got ${type}`)
 			continue
+		}
+		if (prop.minimum !== undefined && (v as number) < prop.minimum) {
+			errors.push(`"${key}" must be at least ${prop.minimum}`)
 		}
 		const itemType = prop.items?.type
 		if (itemType && (v as unknown[]).some((i) => typeOf(i) !== itemType)) {

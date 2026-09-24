@@ -667,6 +667,7 @@ sessions too:
 | Started by | `DELAY` (seconds) |
 |---|---|
 | Self-paced `/loop /ai-loop` (no interval) | `1800` when `SUMMARY` is `idle` — a new `ai-ready` issue can wait half an hour — else `600`: agents in flight, reviews pending, or a PR waiting |
+| Self-paced, with a `loop watch` Monitor running | `1800` always — the watcher wakes the session on change; this wakeup is only the fallback |
 | Fixed `/loop <interval> /ai-loop` | that interval, in seconds; `/loop` schedules it |
 | A plain `/ai-loop` | empty — nothing is scheduled |
 
@@ -713,6 +714,21 @@ segment (`repo-ai fix statusline`) shows it: `🤖 1wip · next 9m` while the lo
 is running, `🤖 1wip · manual` when nothing is scheduled, and nothing at all
 once the last tick is over 35 minutes old. `/ai-tick` runs one tick now and
 schedules nothing, so a running loop keeps its own wakeup.
+
+**Wake on change, not on a timer.** A tick is a full LLM turn; a poll needs no
+LLM. Run the watcher through the **Monitor** tool, where each stdout line wakes
+the session:
+
+```bash
+npx @rtorcato/repo-ai loop watch --root "$ROOT"
+```
+
+It computes the tick's work list every `pollSeconds` (`.repo-ai.json`, default
+180, floor 60) and prints one line only when the actionable part changes — a
+halt once, until it clears. On each line, run a tick. While it runs, Pass 5
+schedules the fallback wakeup 30 minutes out. Re-arm it when the Monitor
+expires at 30 minutes. At the default that is 20 polls an hour, each a few
+GitHub API calls, against the 5,000/h limit.
 
 Ticks fire only while the REPL is idle. Stop by asking the session to stop the
 loop, or remove the `ai-ready` labels and let it idle. On a new repo, run
