@@ -3,6 +3,13 @@
 <!-- 1-3 bullet points describing what changed and why -->
 -
 
+<!--
+The PR title becomes the squash commit subject on `main`, and semantic-release
+reads it to decide whether a release is cut: feat, fix, perf, refactor, revert
+and update release; docs, ci, chore, test and build do not. Pick the type
+deliberately.
+-->
+
 ## Type of change
 
 - [ ] Bug fix
@@ -13,12 +20,18 @@
 
 ## Test plan
 
-- [ ] Existing tests pass (`pnpm test`)
+- [ ] `pnpm verify` passes (check, typecheck, tests, build)
 - [ ] New tests added for new behaviour
-- [ ] Ran `pnpm build` and verified CLI works locally
+- [ ] Changed `loop` commands run locally, with and without `--json`
+
+## Skills and the loop
+
+- [ ] Skill change: `skills/*/SKILL.md` edited, and the matching page in `apps/docs/docs/` updated
+- [ ] Loop behaviour change: tested with a manual `/ai-issue-loop` tick
+- [ ] Neither applies
 
 ## Checklist
 
-- [ ] No `console.log` left in production code
+- [ ] PR title is a Conventional Commit whose type matches the release you intend (see the note above)
 - [ ] No breaking changes (or BREAKING CHANGE footer added to commit)
-- [ ] `pnpm check` (Biome) passes
+- [ ] In `--json` mode, only JSON goes to stdout; diagnostics go to stderr
