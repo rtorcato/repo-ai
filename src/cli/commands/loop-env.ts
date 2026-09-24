@@ -5,7 +5,7 @@ import { type GhExec, realGhExec } from '../../base/gh.js'
 import { configuredAgentUser, defaultWorktreeRoot } from './loop-guard.js'
 
 /**
- * `repo-tooling loop env` — the ai-issue-loop skill's Pass 0 variables,
+ * `repo-tooling loop env` — the ai-loop skill's Pass 0 variables,
  * resolved once (#615). The skill used to derive each in its own bash snippet
  * and re-ran `gh api user` in four places; the semantics below are those
  * snippets', unchanged.

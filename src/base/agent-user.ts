@@ -5,7 +5,7 @@ import type { CheckResult } from './types.js'
 
 /**
  * `aiLoop.agentUser` assignability (#530). The skills that consume the option
- * (`ai-issue-loop`, `ai-workflow`) verify it at runtime and *silently assign
+ * (`ai-loop`, `ai-workflow`) verify it at runtime and *silently assign
  * nothing* on failure — by design, so a deleted bot account or a bot never
  * added as a collaborator degrades the loop with no visible symptom. This
  * check is where that failure becomes visible.

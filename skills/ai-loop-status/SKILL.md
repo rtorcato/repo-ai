@@ -1,7 +1,7 @@
 ---
 name: ai-loop-status
 description: |
-  Show what the ai-issue-loop pipeline is doing right now — read-only. Use when
+  Show what the ai-loop pipeline is doing right now — read-only. Use when
   the user asks "what's the loop doing", "loop status", "is anything blocked",
   or invokes `/ai-loop-status`. Never applies a label, merges a PR, or spawns
   an agent. Takes an optional `owner/repo` argument; defaults to the current
@@ -10,10 +10,10 @@ description: |
 
 # ai-loop-status
 
-Show what the `ai-issue-loop` pipeline is doing right now. Arguments: $ARGUMENTS
+Show what the `ai-loop` pipeline is doing right now. Arguments: $ARGUMENTS
 
 Read-only — this never applies a label, merges a PR, or spawns an agent. To
-actually advance the pipeline, run `/ai-issue-loop`. Because it is read-only, it
+actually advance the pipeline, run `/ai-loop`. Because it is read-only, it
 is the one loop tool allowed to point at another repo via an `owner/repo`
 argument.
 
@@ -82,11 +82,11 @@ argument.
    ```
 
 5. **Check the schedule** — if a scheduler is available (e.g. `CronList`),
-   report whether an `/ai-issue-loop` job is actually scheduled, its cadence,
+   report whether an `/ai-loop` job is actually scheduled, its cadence,
    and whether it dies with the session. A pipeline with labels but no job is
    stalled, and that is the single most likely reason nothing is moving.
 
-   A self-paced `/loop /ai-issue-loop` may not show up as a job: each tick
+   A self-paced `/loop /ai-loop` may not show up as a job: each tick
    schedules only the next one. Then the evidence is the status file's age —
    ticks run at most 30 minutes apart, so a file older than about 35 minutes
    means the loop has stopped:
@@ -117,7 +117,7 @@ argument.
 7. **Report** — format as:
 
    ```
-   ai-issue-loop — <repo> — <date>
+   ai-loop — <repo> — <date>
 
    Schedule: self-paced, last tick 8m ago, next tick in 2m   (or: no tick scheduled, or: NOT RUNNING)
 

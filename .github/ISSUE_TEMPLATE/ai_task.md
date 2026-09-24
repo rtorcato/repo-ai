@@ -1,6 +1,6 @@
 ---
 name: AI task
-about: A self-contained task for the ai-issue-loop. A maintainer adds `ai-ready` once it is ready.
+about: A self-contained task for the ai-loop. A maintainer adds `ai-ready` once it is ready.
 title: "<type>: <short description>"
 ---
 

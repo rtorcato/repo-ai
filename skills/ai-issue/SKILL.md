@@ -1,7 +1,7 @@
 ---
 name: ai-issue
 description: |
-  File a GitHub issue labelled `ai-ready` for the ai-issue-loop pipeline to pick
+  File a GitHub issue labelled `ai-ready` for the ai-loop pipeline to pick
   up and implement unattended. Use when the user says "file this for the loop",
   "make this an AI issue", "queue this for an agent", or invokes `/ai-issue`.
   For an ordinary issue a human will work on, use plain `gh issue create` with
@@ -11,7 +11,7 @@ description: |
 # ai-issue
 
 File an issue an **agent will execute unattended**, labelled `ai-ready` so
-`ai-issue-loop` picks it up. Arguments: $ARGUMENTS
+`ai-loop` picks it up. Arguments: $ARGUMENTS
 
 This is only for work you intend a background agent to do without you. For an
 ordinary issue, use `gh issue create` with no `ai-*` label.
@@ -21,7 +21,7 @@ ordinary issue, use `gh issue create` with no `ai-*` label.
 1. `git remote get-url origin` — GitHub only. On GitLab, stop: the loop is
    `gh`-based and nothing would ever pick the issue up.
 2. `gh label list --search ai-ready` — if the label is missing, this repo hasn't
-   been bootstrapped for the loop. Stop and point at the `ai-issue-loop` skill's
+   been bootstrapped for the loop. Stop and point at the `ai-loop` skill's
    label block; creating a bare `ai-ready` label would produce an issue that
    silently never runs.
 
@@ -70,5 +70,5 @@ EOF
 )"
 ```
 
-Print the URL. Note that nothing happens until a tick runs — `/ai-issue-loop`
+Print the URL. Note that nothing happens until a tick runs — `/ai-loop`
 manually, or a recurring schedule if one is active.

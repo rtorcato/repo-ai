@@ -5,7 +5,7 @@ import { type GhExec, realGhExec } from './gh.js'
 import type { CheckResult } from './types.js'
 
 /**
- * `ai-issue-loop` label hygiene (#446). Same class of GitHub-side drift as
+ * `ai-loop` label hygiene (#446). Same class of GitHub-side drift as
  * github-settings.ts and milestones.ts, on the same `gh` seam.
  *
  * The bug this exists for: the skill's bootstrap uses `gh label create`, which
@@ -17,7 +17,7 @@ import type { CheckResult } from './types.js'
  * goes through `gh label edit`, which is the whole point of the fixer.
  *
  * This table is the single source of truth for the label set. The bootstrap
- * block in skills/ai-issue-loop/SKILL.md is asserted against it in
+ * block in skills/ai-loop/SKILL.md is asserted against it in
  * tests/base/labels.test.ts, so the two cannot drift apart.
  */
 
@@ -155,7 +155,7 @@ export async function checkLoopLabels(dir: string, exec?: GhExec): Promise<Check
 		return {
 			check: CHECK,
 			status: 'ok',
-			detail: 'not applicable — repo does not use the ai-issue-loop labels',
+			detail: 'not applicable — repo does not use the ai-loop labels',
 		}
 
 	const deltas: string[] = []
@@ -174,7 +174,7 @@ export async function checkLoopLabels(dir: string, exec?: GhExec): Promise<Check
 	return {
 		check: CHECK,
 		status: 'ok',
-		detail: `${present.length} ai-issue-loop label(s) match spec`,
+		detail: `${present.length} ai-loop label(s) match spec`,
 	}
 }
 
@@ -208,7 +208,7 @@ export async function applyLoopLabels(
 
 	const { present, missing, wrongColor, wrongDescription } = classifyLabels(existing)
 	if (!opts.bootstrap && present.length < IN_USE_THRESHOLD) {
-		console.error(chalk.gray('   skipped — repo does not use the ai-issue-loop labels'))
+		console.error(chalk.gray('   skipped — repo does not use the ai-loop labels'))
 		return []
 	}
 

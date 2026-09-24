@@ -17,7 +17,7 @@ const program = new Command()
 
 program
 	.name('repo-ai')
-	.description('🤖 The ai-issue-loop pipeline: loop mechanics, skills, and their audit')
+	.description('🤖 The ai-loop pipeline: loop mechanics, skills, and their audit')
 	.version(await getToolVersion())
 
 program
@@ -54,7 +54,7 @@ program
 	.option('--json', 'Emit machine-readable JSON output (implies --yes)')
 	.action(fixCommand)
 
-const loop = program.command('loop').description('🔁 ai-issue-loop mechanics as tested commands')
+const loop = program.command('loop').description('🔁 ai-loop mechanics as tested commands')
 
 loop
 	.command('guard')

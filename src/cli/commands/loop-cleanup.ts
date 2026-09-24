@@ -5,7 +5,7 @@ import { type GhExec, realGhExec } from '../../base/gh.js'
 import { defaultWorktreeRoot, findLive } from './loop-guard.js'
 
 /**
- * `repo-tooling loop cleanup` — the ai-issue-loop skill's Pass 2 worktree
+ * `repo-tooling loop cleanup` — the ai-loop skill's Pass 2 worktree
  * cleanup, moved out of prose (#617). For each `ai-*` worktree in either root
  * (the sibling `<root>-worktrees` and the legacy `<root>/.claude/worktrees`):
  *

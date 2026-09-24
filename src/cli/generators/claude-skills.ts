@@ -18,10 +18,10 @@ import { type GitExec, isNewerVersion, resolveShippedVersion } from '../utils/ve
  * Skills this package owns the content of and keeps up to date. The loop first —
  * it is the pipeline; the other three are its drivers (burst, on-ramp, status).
  */
-export const SHIPPED_SKILLS = ['ai-issue-loop', 'ai-workflow', 'ai-issue', 'ai-loop-status']
+export const SHIPPED_SKILLS = ['ai-loop', 'ai-workflow', 'ai-issue', 'ai-loop-status']
 
 /** The primary skill — the default everywhere a single name is accepted. */
-export const SHIPPED_SKILL = 'ai-issue-loop'
+export const SHIPPED_SKILL = 'ai-loop'
 
 /**
  * Stamped into the installed copy's frontmatter so a second repo pinned to an
@@ -230,7 +230,7 @@ async function isSymlink(file: string): Promise<boolean> {
  * Install (or refresh) one shipped skill under `skillsDir`.
  *
  * **Writes through a symlink on purpose.** stow symlinks dotfiles at *file*
- * level, so `~/.claude/skills/ai-issue-loop/SKILL.md` is routinely a link into a
+ * level, so `~/.claude/skills/ai-loop/SKILL.md` is routinely a link into a
  * dotfiles checkout while its parent directories are real. `fs.writeFile`
  * follows the link and updates the dotfiles copy in place, which is the whole
  * point — the skill stays version-controlled with the rest of the Claude config.

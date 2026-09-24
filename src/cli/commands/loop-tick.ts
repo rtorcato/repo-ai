@@ -10,7 +10,7 @@ import { runLoopVerdict, type Verdict } from './loop-marker.js'
 import { labelApplications, MAX_APPLICATIONS, type ReapEntry, runLoopReap } from './loop-reap.js'
 
 /**
- * `repo-tooling loop tick` — one ai-issue-loop tick's mechanics as one work
+ * `repo-tooling loop tick` — one ai-loop tick's mechanics as one work
  * list (#620). It composes `loop env`, `loop guard`, `loop cleanup`,
  * `loop reap` and `loop verdict` with the Pass 1 merge-state and CI reads, the
  * Pass 0 PR-adoption query, the Pass 2 `ai-suggested` decay and the Pass 4

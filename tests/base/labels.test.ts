@@ -171,9 +171,9 @@ describe('applyLoopLabels', () => {
  * other copy of this table, and it is the copy that drifted (#446) — so it is
  * asserted against LOOP_LABELS rather than trusted.
  */
-describe('skills/ai-issue-loop/SKILL.md bootstrap block', () => {
+describe('skills/ai-loop/SKILL.md bootstrap block', () => {
 	const skill = readFileSync(
-		path.resolve(import.meta.dirname, '../../skills/ai-issue-loop/SKILL.md'),
+		path.resolve(import.meta.dirname, '../../skills/ai-loop/SKILL.md'),
 		'utf8'
 	)
 	const LINE = /^gh label create\s+(\S+)\s+-c\s+'#([0-9a-fA-F]{6})'\s+-d\s+'(.*)'$/gm

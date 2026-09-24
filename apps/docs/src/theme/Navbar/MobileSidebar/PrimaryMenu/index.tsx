@@ -30,7 +30,7 @@ type Item = {
 
 const ITEMS: Item[] = [
 	{ label: 'Docs', to: '/docs' },
-	{ label: 'Guide', to: '/docs/ai-issue-loop' },
+	{ label: 'Guide', to: '/docs/ai-loop' },
 	{ label: 'Commands', to: '/docs/commands' },
 	{ label: 'Changelog', to: '/docs/changelog' },
 	{ label: 'GitHub', href: 'https://github.com/rtorcato/repo-ai' },

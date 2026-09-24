@@ -1,9 +1,9 @@
 ---
-title: The AI Issue Loop
+title: The AI Loop
 description: The end-to-end label-driven pipeline that turns an ai-ready GitHub issue into a reviewed PR — the one constraint that shapes it, the label state machine, the repo prerequisites, and the limits that keep it cheap.
 ---
 
-`ai-issue-loop` is a **label-driven pipeline** that takes a GitHub issue marked
+`ai-loop` is a **label-driven pipeline** that takes a GitHub issue marked
 `ai-ready`, implements it in a per-issue git worktree, opens a PR, has two agents
 review it, and hands it to you to merge. It runs unattended on a timer.
 
@@ -23,7 +23,7 @@ worktree config — come from [`@rtorcato/repo-tooling`](https://github.com/rtor
 npx @rtorcato/repo-ai fix claude-skills
 ```
 
-That writes `~/.claude/skills/ai-issue-loop/SKILL.md`. Unlike every other fixer
+That writes `~/.claude/skills/ai-loop/SKILL.md`. Unlike every other fixer
 this one writes **user-global** state — a directory shared by every project on
 the machine — which is why it is **opt-in**: a bare `fix` or `fix --yes` skips
 it and says so, and `doctor` reports it as *not configured* rather than as a
@@ -35,7 +35,7 @@ Four things follow from that:
   `--yes` / `--json` when `~/.claude/skills` does not exist, since a prompt
   would corrupt the JSON payload.
 - **A stow-managed symlink is written *through*, not replaced.** If
-  `~/.claude/skills/ai-issue-loop/SKILL.md` is a symlink into a dotfiles
+  `~/.claude/skills/ai-loop/SKILL.md` is a symlink into a dotfiles
   checkout, the content lands in dotfiles and stays version-controlled with the
   rest of your Claude config. The CLI reports the resolved real path so you know
   what to commit.
@@ -58,7 +58,7 @@ Any agent that reads the [`skills`](https://www.npmjs.com/package/skills) CLI
 format can also take it straight from GitHub:
 
 ```bash
-npx skills add https://github.com/rtorcato/repo-ai --skill ai-issue-loop
+npx skills add https://github.com/rtorcato/repo-ai --skill ai-loop
 ```
 
 ## The one constraint
@@ -282,12 +282,12 @@ These exist because the loop runs unattended against a monthly usage cap.
 ## Driving it
 
 ```
-/loop /ai-issue-loop
+/loop /ai-loop
 ```
 
 No interval: the loop paces itself. Each tick schedules the next, 10 minutes out
 while agents or reviews are in flight and 30 minutes when idle, so a quiet repo
-costs two ticks an hour. A fixed `/loop 15m /ai-issue-loop` still works.
+costs two ticks an hour. A fixed `/loop 15m /ai-loop` still works.
 
 **Is a tick coming?** Every tick ends with a `Next tick:` line, and the
 statusline segment (`npx @rtorcato/repo-ai fix statusline`) shows it:
@@ -298,7 +298,7 @@ reports the same.
 Ticks fire only while the REPL is idle. Stop by asking the session to stop the
 loop, or just remove the `ai-ready` labels — the loop then idles harmlessly.
 
-Run `/ai-issue-loop` **manually** three or four times against one trivial issue
+Run `/ai-loop` **manually** three or four times against one trivial issue
 before letting the timer drive it.
 
 ## Safety

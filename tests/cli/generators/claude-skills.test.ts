@@ -33,7 +33,7 @@ function skillFile(skillsDir: string): string {
 async function installedByOlderRelease(skillsDir: string, body: string): Promise<void> {
 	await fs.outputFile(
 		skillFile(skillsDir),
-		stampSkill(`---\nname: ai-issue-loop\n---\n\n${body}\n`, '0.0.1')
+		stampSkill(`---\nname: ai-loop\n---\n\n${body}\n`, '0.0.1')
 	)
 }
 
@@ -103,7 +103,7 @@ describe('installClaudeSkill', () => {
 
 		const content = await fs.readFile(skillFile(skillsDir), 'utf8')
 		expect(readSkillVersion(content)).toBe(first.shippedVersion)
-		expect(content).toContain('# ai-issue-loop')
+		expect(content).toContain('# ai-loop')
 
 		expect((await installClaudeSkill(skillsDir)).status).toBe('up-to-date')
 	})
@@ -112,7 +112,7 @@ describe('installClaudeSkill', () => {
 		const skillsDir = newTmpDir()
 		await fs.outputFile(
 			skillFile(skillsDir),
-			stampSkillVersion('---\nname: ai-issue-loop\n---\n\nfrom the future\n', '999.0.0')
+			stampSkillVersion('---\nname: ai-loop\n---\n\nfrom the future\n', '999.0.0')
 		)
 		const result = await installClaudeSkill(skillsDir)
 		expect(result.status).toBe('declined-downgrade')
@@ -128,7 +128,7 @@ describe('installClaudeSkill', () => {
 		expect(result.status).toBe('updated')
 		expect(result.contentState).toBe('pristine')
 		expect(result.installedVersion).toBe('0.0.1')
-		expect(await fs.readFile(skillFile(skillsDir), 'utf8')).toContain('# ai-issue-loop')
+		expect(await fs.readFile(skillFile(skillsDir), 'utf8')).toContain('# ai-loop')
 	})
 
 	// #480: the version stamp alone cannot see this. The fork was *older* than
@@ -151,7 +151,7 @@ describe('installClaudeSkill', () => {
 
 	it('refuses an unstamped copy rather than guessing it is merely stale', async () => {
 		const skillsDir = newTmpDir()
-		await fs.outputFile(skillFile(skillsDir), '---\nname: ai-issue-loop\n---\n\nold\n')
+		await fs.outputFile(skillFile(skillsDir), '---\nname: ai-loop\n---\n\nold\n')
 
 		const result = await installClaudeSkill(skillsDir)
 
@@ -163,12 +163,12 @@ describe('installClaudeSkill', () => {
 
 	it('overwrites a fork when explicitly forced', async () => {
 		const skillsDir = newTmpDir()
-		await fs.outputFile(skillFile(skillsDir), '---\nname: ai-issue-loop\n---\n\nold\n')
+		await fs.outputFile(skillFile(skillsDir), '---\nname: ai-loop\n---\n\nold\n')
 
 		const result = await installClaudeSkill(skillsDir, SHIPPED_SKILL, { force: true })
 
 		expect(result.status).toBe('updated')
-		expect(await fs.readFile(skillFile(skillsDir), 'utf8')).toContain('# ai-issue-loop')
+		expect(await fs.readFile(skillFile(skillsDir), 'utf8')).toContain('# ai-loop')
 	})
 
 	// An unstamped copy of exactly what we ship is not a fork — it just predates
@@ -199,7 +199,7 @@ describe('installClaudeSkill', () => {
 	it('writes through a symlink instead of replacing it', async () => {
 		const skillsDir = newTmpDir()
 		const dotfiles = join(newTmpDir(), 'SKILL.md')
-		await fs.outputFile(dotfiles, stampSkill('---\nname: ai-issue-loop\n---\n\nold\n', '0.0.1'))
+		await fs.outputFile(dotfiles, stampSkill('---\nname: ai-loop\n---\n\nold\n', '0.0.1'))
 		await fs.ensureDir(join(skillsDir, SHIPPED_SKILL))
 		await fs.symlink(dotfiles, skillFile(skillsDir))
 
@@ -209,7 +209,7 @@ describe('installClaudeSkill', () => {
 		expect(result.viaSymlink).toBe(true)
 		expect((await fs.lstat(skillFile(skillsDir))).isSymbolicLink()).toBe(true)
 		expect(await fs.realpath(result.realFile)).toBe(await fs.realpath(dotfiles))
-		expect(await fs.readFile(dotfiles, 'utf8')).toContain('# ai-issue-loop')
+		expect(await fs.readFile(dotfiles, 'utf8')).toContain('# ai-loop')
 	})
 })
 
@@ -218,7 +218,7 @@ describe('installClaudeSkill', () => {
 // wherever a symlink points. Unquoted, a path carrying `"` or `$(...)` yields a
 // line that does something other than a diff.
 describe('skillDiffCommand', () => {
-	const SHIPPED = '/pkg/skills/ai-issue-loop/SKILL.md'
+	const SHIPPED = '/pkg/skills/ai-loop/SKILL.md'
 
 	/**
 	 * Run the emitted command through a real shell with `diff` swapped for a
@@ -233,7 +233,7 @@ describe('skillDiffCommand', () => {
 	}
 
 	it('is a pasteable diff for ordinary paths', () => {
-		const realFile = '/home/me/.claude/skills/ai-issue-loop/SKILL.md'
+		const realFile = '/home/me/.claude/skills/ai-loop/SKILL.md'
 		expect(skillDiffCommand({ realFile, shippedFile: SHIPPED })).toBe(
 			`diff '${realFile}' '${SHIPPED}'`
 		)
@@ -244,7 +244,7 @@ describe('skillDiffCommand', () => {
 	})
 
 	it.each([
-		['a space', '/tmp/my skills/ai-issue-loop/SKILL.md'],
+		['a space', '/tmp/my skills/ai-loop/SKILL.md'],
 		['a double quote', '/tmp/we"rd/SKILL.md'],
 		['a single quote', "/tmp/it's/SKILL.md"],
 		['a command substitution', '/tmp/$(echo pwned)/SKILL.md'],

@@ -1,10 +1,10 @@
 #!/bin/sh
-# ai-issue-loop statusline segment — shipped by @rtorcato/repo-ai.
+# ai-loop statusline segment — shipped by @rtorcato/repo-ai.
 # Installed to ~/.claude/ai-loop-statusline.sh by `repo-ai fix statusline`;
 # edits there are overwritten on the next run of that fixer.
 #
 # Prints "🤖 <summary> · next 9m" (or "· manual") — from <repo>/.claude/ai-loop-status, written by
-# the ai-issue-loop skill's Pass 5 at the end of every tick — or nothing when
+# the ai-loop skill's Pass 5 at the end of every tick — or nothing when
 # there is no status or it is stale.
 #
 #   ai-loop-statusline.sh [dir]

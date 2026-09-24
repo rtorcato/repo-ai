@@ -98,7 +98,7 @@ export async function checkClaudeSkills(skillsDir?: string): Promise<CheckResult
  *
  * Staleness is the failure mode it exists for. Absence fails loudly the moment
  * something reaches for the skill; a copy three releases behind runs to
- * completion without complaint — observed 2026-08-26, an `ai-issue-loop` missing
+ * completion without complaint — observed 2026-08-26, an `ai-loop` missing
  * both its decision-comment security gate and its decay rule.
  *
  * Same severity rule as `checkClaudeSkills`, for the same reason: it probes the
@@ -114,6 +114,8 @@ export async function checkRequiredSkills(
 	skillsDir?: string
 ): Promise<CheckResult> {
 	const check = 'Required skills'
+	// ai-loop was ai-issue-loop before #56; existing configs still name it that.
+	names = names.map((name) => (name === 'ai-issue-loop' ? 'ai-loop' : name))
 	const hint =
 		'Run `npx @rtorcato/repo-ai fix claude-skills` yourself to install or refresh them — add `--force-skills` to overwrite a locally modified copy. It writes to `~/.claude`, outside this repo, so nothing runs it for you.'
 	// A name outside SHIPPED_SKILLS has no shipped asset to hash against, and

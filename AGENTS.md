@@ -4,7 +4,7 @@ Orientation for coding agents working on `@rtorcato/repo-ai`.
 
 ## What this is
 
-The ai-issue-loop pipeline, split out of `@rtorcato/repo-tooling`:
+The ai-loop pipeline, split out of `@rtorcato/repo-tooling`:
 
 - `skills/*/SKILL.md` — the Claude Code skills (the loop, its burst driver, the issue on-ramp, and the status view).
 - `src/cli/commands/loop-*.ts` — the `loop` commands the skills call, with the mechanics turned into testable code.

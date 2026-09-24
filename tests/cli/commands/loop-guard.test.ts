@@ -16,7 +16,7 @@ import type { GhExec } from '../../../src/base/gh.js'
 import { useTmpDir } from '../../helpers/tmp-dir.js'
 
 /**
- * The spec is the invariant table in skills/ai-issue-loop/SKILL.md (#519). It
+ * The spec is the invariant table in skills/ai-loop/SKILL.md (#519). It
  * is asserted twice on purpose: once against `classifyRoot` (fast, exhaustive)
  * and once against repositories git actually created, because the table is a
  * claim about git's behaviour and a pure test can only re-state it.
