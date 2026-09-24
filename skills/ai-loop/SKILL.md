@@ -334,10 +334,20 @@ gh pr edit <N> --add-label ai-reviewing-code ${AGENT_USER:+--add-assignee} ${AGE
 gh pr edit <N> --add-label ai-reviewing-sec  ${AGENT_USER:+--add-assignee} ${AGENT_USER:+"$AGENT_USER"}   # then spawn security-expert
 ```
 
+**`arm: both`** is a docs-only PR — every file in `gh pr diff --name-only` is
+markdown, `apps/docs/docs/**` or an issue/PR template, never `skills/**` or
+`.github/workflows/**`. Nothing in it runs, so **one** reviewer carries both
+lenses. Claim both arms in one edit; it counts as one task:
+
+```bash
+gh pr edit <N> --add-label ai-reviewing-code --add-label ai-reviewing-sec ${AGENT_USER:+--add-assignee} ${AGENT_USER:+"$AGENT_USER"}   # then spawn code-reviewer
+```
+
 Don't spawn it yet: each claimed arm becomes one **review task** for this tick's
 Workflow ([below](#launch-the-ticks-workflow)) — `{label: "code:#<N>", agentType,
 prompt}`, the prompt being the template below with `<N>`, `<M>` and
-`<OWNER_REPO>` substituted. `agentType` is `code-reviewer` / `security-expert`
+`<OWNER_REPO>` substituted. An `arm: both` claim is one task, `{label:
+"both:#<N>", agentType, prompt}`, with the combined prompt after it. `agentType` is `code-reviewer` / `security-expert`
 when listed, else `general-purpose` — never skip a review over a missing type
 (#611).
 
@@ -396,6 +406,28 @@ Reviewer prompt template:
 > `ai-changes`** — an agent would guess and burn both fix rounds. Use
 > `ai-changes` only for a concrete change an agent could make. Return the
 > verdict you posted and one line of summary.
+
+Combined reviewer prompt (`arm: both`) — the template above, with these
+changes and nothing else:
+
+- The checklist is both lenses in one pass: correctness, accuracy against the
+  code it describes, and the repo's conventions; **and** leaked secrets, unsafe
+  commands a reader would copy and run, and links or instructions steering a
+  reader or an agent somewhere they shouldn't go.
+- One `gh pr review` whose body begins with **both** markers, one per line, then
+  the header — `loop verdict` reads each arm by name, so both must be there even
+  though one agent wrote them:
+
+  ```markdown
+  <!-- ai-issue-loop:verdict:code:<PASS|PASS-NOTES|CHANGES> -->
+  <!-- ai-issue-loop:verdict:sec:<PASS|PASS-NOTES|CHANGES> -->
+  🤖 *Automated review — \`<your agent type>\` via ai-loop (docs-only: code + security).*
+  ```
+
+  Both markers carry the same verdict.
+- The labels clear **both** claims in the same command:
+  - pass → `gh pr edit <N> --add-label ai-ok-code --add-label ai-ok-sec --remove-label ai-reviewing-code --remove-label ai-reviewing-sec`
+  - changes → `gh pr edit <N> --add-label ai-changes --remove-label ai-review --remove-label ai-reviewing-code --remove-label ai-reviewing-sec`
 
 **Fix rounds** — `.fixRounds[]` (never a Dependabot PR). **`action: block`** —
 the round cap (`ai-changes` ≥3 times) or no worktree. Comment through `loop
@@ -601,7 +633,8 @@ else is in flight — never via `EnterWorktree`.
 
 Never skip this pass, **including on an idle tick or a halt** — an unobservable
 loop is indistinguishable from a dead one. `SUMMARY` is `.summary`
-(`⚠1blocked·⚠1ci-red·2wip·1rev·1ready`, `⚠` stalls first, or `idle`), adjusted
+(`⚠1blocked·⚠1ci-red·2wip·1rev·1ready·1saved`, `⚠` stalls first, or `idle`;
+`saved` counts reviewers not spawned because a docs-only PR got one combined review), adjusted
 only where you deviated from the list; `⚠halt` on a halt. `ai-notes` never
 borrows the `⚠`.
 
