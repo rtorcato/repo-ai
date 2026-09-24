@@ -21,6 +21,10 @@ const config: Config = {
 
 	onBrokenLinks: 'warn',
 
+	// Serves schemas/repo-ai.json at /repo-ai/repo-ai.json — the `$schema` URL
+	// `fix config` writes into .repo-ai.json (#67).
+	staticDirectories: ['static', '../../schemas'],
+
 	markdown: {
 		format: 'detect',
 		hooks: {

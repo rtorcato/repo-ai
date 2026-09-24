@@ -15,8 +15,9 @@ carries only the result. Configuration lives in the consuming repo's
 
 | Command | What it does |
 |---|---|
-| `setup [--yes] [--json]` | Onboard a repo: runs `fix claude-skills`, creates or repairs the loop labels, `fix ai-loop-identity` (with an agent user), and `fix statusline` — asking before each — then `doctor`. |
-| `doctor [--json]` | Audit the loop setup: label spec, `rules.aiLoop.agentUser`, installed skills, `requiredSkills`, and whether your statusline shows the loop status. Exits 1 only on `drift` / `missing`. |
+| `setup [--yes] [--json]` | Onboard a repo: runs `fix config`, `fix claude-skills`, creates or repairs the loop labels, `fix ai-loop-identity` (with an agent user), and `fix statusline` — asking before each — then `doctor`. |
+| `doctor [--json]` | Audit the loop setup: label spec, `.repo-ai.json` against its schema, `agentUser`, installed skills, `requiredSkills`, and whether your statusline shows the loop status. Exits 1 only on `drift` / `missing`. |
+| `fix config` | Write `$schema` into `.repo-ai.json`. With no file, create one, seeded from the legacy `.repo-tooling.json` settings. |
 | `fix labels` | Repair loop label colours and descriptions with `gh label edit`. |
 | `fix claude-skills` | Install or update the skills into `~/.claude/skills` (or `--skills-dir <path>`). `--force-skills` overwrites a modified or newer copy. |
 | `fix ai-loop-identity` | Point this checkout's Claude sessions at a `gh` profile signed in as `rules.aiLoop.agentUser`. |
