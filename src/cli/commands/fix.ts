@@ -28,10 +28,12 @@ export interface FixOptions {
  * repo's labels, `~/.claude/skills`, the checkout's gh identity — so every one
  * runs only when named. There is no bare `fix`.
  */
-export const FIXERS: Record<
-	string,
-	{ description: string; run(dir: string, o: FixOptions): Promise<string[]> }
-> = {
+export interface Fixer {
+	description: string
+	run(dir: string, o: FixOptions): Promise<string[]>
+}
+
+export const FIXERS = {
 	labels: {
 		description:
 			'Repair ai-issue-loop label colours and descriptions on GitHub via `gh label edit`',
@@ -51,7 +53,7 @@ export const FIXERS: Record<
 			'Install the loop status segment to ~/.claude/ai-loop-statusline.sh; set it as the statusline only when none is configured',
 		run: () => installStatusline(os.homedir()),
 	},
-}
+} satisfies Record<string, Fixer>
 
 async function installSkills({ skillsDir, forceSkills, yes, json }: FixOptions) {
 	const dir = await resolveInstallDir(skillsDir, Boolean(yes || json))
@@ -124,7 +126,7 @@ function describeSkillFork(result: SkillInstallResult): string[] {
 }
 
 export async function fixCommand(target: string, options: FixOptions): Promise<void> {
-	const fixer = FIXERS[target]
+	const fixer = (FIXERS as Record<string, Fixer>)[target]
 	const dir = path.resolve(options.dir)
 	const fail = (error: string, message: string, hint?: string) => {
 		if (options.json) console.log(JSON.stringify({ target, error, message, hint }, null, 2))

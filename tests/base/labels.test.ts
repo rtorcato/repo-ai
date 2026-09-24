@@ -146,6 +146,13 @@ describe('applyLoopLabels', () => {
 		expect(vi.mocked(exec).mock.calls.every((c) => c[0][1] === 'list')).toBe(true)
 	})
 
+	it('creates the whole set on a fresh repo when bootstrapping (setup, #12)', async () => {
+		const exec = fakeGh([{ name: 'bug', color: 'd73a4a', description: '' }])
+		const applied = await applyLoopLabels(gitRepo(), exec, { bootstrap: true })
+		expect(applied).toHaveLength(LOOP_LABELS.length)
+		expect(applied.every((a) => a.startsWith('created label'))).toBe(true)
+	})
+
 	it('is a no-op outside a git repo', async () => {
 		const exec = fakeGh([])
 		expect(await applyLoopLabels(newTmpDir(), exec)).toEqual([])

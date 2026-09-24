@@ -11,13 +11,13 @@ This package holds the moving parts: the Claude Code skills, the `loop` commands
 
 See [the docs site](https://rtorcato.github.io/repo-ai/docs/ai-issue-loop) for how the pipeline works.
 
-## Install the skills
+## Set up
 
 ```bash
-npx @rtorcato/repo-ai fix claude-skills
+npx @rtorcato/repo-ai setup
 ```
 
-This installs `ai-issue-loop`, `ai-workflow`, `ai-issue` and `ai-loop-status` into `~/.claude/skills` (or `--skills-dir <path>`).
+One guided run: the skills, the loop labels, the agent identity, and the statusline segment, asking before each, then `doctor`. The skill step installs `ai-issue-loop`, `ai-workflow`, `ai-issue` and `ai-loop-status` into `~/.claude/skills` (or `--skills-dir <path>`).
 
 **Moving over from repo-tooling?** Skills installed by `@rtorcato/repo-tooling` carry that package's version stamp, so this installer treats them as local edits and won't overwrite them. Run it once with `--force-skills`.
 
@@ -25,6 +25,7 @@ This installs `ai-issue-loop`, `ai-workflow`, `ai-issue` and `ai-loop-status` in
 
 | Command | What it does |
 |---|---|
+| `setup [--yes] [--json]` | Onboard a repo: runs `fix claude-skills`, creates or repairs the loop labels, `fix ai-loop-identity` (with an agent user), and `fix statusline` — asking before each — then `doctor`. |
 | `doctor [--json]` | Audit the loop setup: label spec, `rules.aiLoop.agentUser`, installed skills, `requiredSkills`, and whether your statusline shows the loop status. Exits 1 only on `drift` / `missing`. |
 | `fix labels` | Repair loop label colours and descriptions with `gh label edit`. |
 | `fix claude-skills` | Install or update the skills. `--force-skills` overwrites a modified or newer copy. |

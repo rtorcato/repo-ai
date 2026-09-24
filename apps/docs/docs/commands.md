@@ -13,6 +13,7 @@ carries only the result. Configuration lives in the consuming repo's
 
 | Command | What it does |
 |---|---|
+| `setup [--yes] [--json]` | Onboard a repo: runs `fix claude-skills`, creates or repairs the loop labels, `fix ai-loop-identity` (with an agent user), and `fix statusline` — asking before each — then `doctor`. |
 | `doctor [--json]` | Audit the loop setup: label spec, `rules.aiLoop.agentUser`, installed skills, `requiredSkills`, and whether your statusline shows the loop status. Exits 1 only on `drift` / `missing`. |
 | `fix labels` | Repair loop label colours and descriptions with `gh label edit`. |
 | `fix claude-skills` | Install or update the skills into `~/.claude/skills` (or `--skills-dir <path>`). `--force-skills` overwrites a modified or newer copy. |
