@@ -8,6 +8,7 @@ import { loopEnvCommand } from './commands/loop-env.js'
 import { loopGuardCommand } from './commands/loop-guard.js'
 import { loopCommentCommand, loopVerdictCommand } from './commands/loop-marker.js'
 import { loopReapCommand } from './commands/loop-reap.js'
+import { loopTickCommand } from './commands/loop-tick.js'
 import { loopWorktreeAddCommand } from './commands/loop-worktree.js'
 import { getToolVersion } from './utils/version.js'
 
@@ -135,5 +136,17 @@ loop
 			'Exits 1 when the PR or its reviews cannot be read.\n'
 	)
 	.action(loopVerdictCommand)
+
+loop
+	.command('tick')
+	.description("📋 Compute one tick's work list — guard, cleanup, reap, verdicts, pickups")
+	.option('--root <path>', 'Main checkout, or any worktree of it', process.cwd())
+	.option('--json', 'Emit machine-readable JSON output')
+	.addHelpText(
+		'after',
+		'\nWrites no GitHub state: the caller applies every label, comment and spawn.\n' +
+			"Exit 1 or 2 halts the tick (loop guard's codes, or an unresolvable checkout).\n"
+	)
+	.action(loopTickCommand)
 
 await program.parseAsync()
