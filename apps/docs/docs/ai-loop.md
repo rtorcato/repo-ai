@@ -79,6 +79,7 @@ optional:
 | `$schema` | string | none | Your editor, for completion and validation. `fix config` and `setup` write it. |
 | `agentUser` | string | none: the loop runs as whoever `gh` is signed in as | `loop guard`, which halts a tick running as anyone else; `loop env`; `fix ai-loop-identity`; `doctor`. |
 | `requiredSkills` | string[] | `[]`: no check | `doctor`, which reports any listed skill that is not installed. Checked only when `agentUser` is set. |
+| `pollSeconds` | integer | `180`; values below `60` are raised to `60` | `loop watch`, between polls. Each poll costs several GitHub API calls against the 5,000/h limit. |
 
 The schema is [`schemas/repo-ai.json`](https://rtorcato.github.io/repo-ai/repo-ai.json)
 (JSON Schema draft 2020-12), which ships in the npm package too. It sets
@@ -367,6 +368,23 @@ reports the same.
 **Don't want to wait?** `/ai-tick` runs one tick now, say after merging a PR or
 labelling an issue `ai-ready`. It schedules nothing, so a running loop keeps its
 own wakeup.
+
+**Wake on change instead.** A tick is a full LLM turn, so ticking faster costs
+more tokens. `loop watch` polls without the LLM: every `pollSeconds` it computes
+the tick's work list and prints one line only when the actionable part changes.
+The skill runs it through Claude Code's Monitor tool, where each line wakes the
+session for a tick, and re-arms it when the Monitor expires at 30 minutes. While
+a watcher runs, the fallback wakeup is always 30 minutes.
+
+```bash
+npx @rtorcato/repo-ai loop watch
+```
+
+A poll costs what a tick's reads cost: a handful of GitHub API calls, plus a
+couple per open loop PR. At the default 180 seconds that is 20 polls an hour,
+so a repo with a few PRs in flight stays well under the 5,000/h limit. Raise
+`pollSeconds` in `.repo-ai.json` if the same token drives other automation. It
+can't go below 60. A halt prints once, and a failed poll is skipped.
 
 Ticks fire only while the REPL is idle. Stop by asking the session to stop the
 loop, or just remove the `ai-ready` labels — the loop then idles harmlessly.

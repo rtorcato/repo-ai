@@ -20,6 +20,14 @@ describe('readConfig', () => {
 		})
 	})
 
+	it('reads pollSeconds, floored at 60', async () => {
+		const dir = newTmpDir()
+		fs.outputJsonSync(join(dir, '.repo-ai.json'), { pollSeconds: 300 })
+		expect((await readConfig(dir)).pollSeconds).toBe(300)
+		fs.outputJsonSync(join(dir, '.repo-ai.json'), { pollSeconds: 10 })
+		expect((await readConfig(dir)).pollSeconds).toBe(60)
+	})
+
 	it('falls back to .repo-tooling.json rules.aiLoop / rules.requiredSkills', async () => {
 		const dir = newTmpDir()
 		fs.outputJsonSync(join(dir, '.repo-tooling.json'), {
