@@ -1,0 +1,80 @@
+import { join } from 'node:path'
+import fs from 'fs-extra'
+import { describe, expect, it } from 'vitest'
+import {
+	checkConfigSchema,
+	SCHEMA_URL,
+	validateConfig,
+	writeConfigSchema,
+} from '../../src/base/config-schema.js'
+import { FixerAbort } from '../../src/base/fixer-abort.js'
+import { useTmpDir } from '../helpers/tmp-dir.js'
+
+const newTmpDir = useTmpDir()
+
+describe('validateConfig', () => {
+	it('accepts every known key with the right type', () => {
+		expect(
+			validateConfig({ $schema: SCHEMA_URL, agentUser: 'bot', requiredSkills: ['ai-loop'] })
+		).toEqual([])
+	})
+
+	it('rejects unknown keys, wrong types, and non-string skills', () => {
+		expect(validateConfig({ agentUsr: 'bot' })).toEqual(['unknown key "agentUsr"'])
+		expect(validateConfig({ agentUser: 1 })).toEqual(['"agentUser" must be string, got number'])
+		expect(validateConfig({ requiredSkills: ['a', 2] })).toEqual([
+			'"requiredSkills" must contain only string items',
+		])
+		expect(validateConfig([])).toEqual(['must be an object, got array'])
+	})
+})
+
+describe('checkConfigSchema', () => {
+	it('is silent with no .repo-ai.json, ok with a valid one', async () => {
+		const dir = newTmpDir()
+		expect(await checkConfigSchema(dir)).toBeNull()
+		fs.outputJsonSync(join(dir, '.repo-ai.json'), { agentUser: 'bot' })
+		expect((await checkConfigSchema(dir))?.status).toBe('ok')
+	})
+
+	it('flags a typo and unparseable JSON as drift', async () => {
+		const dir = newTmpDir()
+		fs.outputJsonSync(join(dir, '.repo-ai.json'), { agentUsr: 'bot' })
+		expect(await checkConfigSchema(dir)).toMatchObject({ status: 'drift' })
+		fs.outputFileSync(join(dir, '.repo-ai.json'), '{ nope')
+		expect((await checkConfigSchema(dir))?.detail).toMatch(/not valid JSON/)
+	})
+})
+
+describe('writeConfigSchema', () => {
+	it('puts $schema first in an existing file, and is idempotent', async () => {
+		const dir = newTmpDir()
+		const file = join(dir, '.repo-ai.json')
+		fs.outputJsonSync(file, { agentUser: 'bot', $schema: 'old' })
+		expect(await writeConfigSchema(dir)).toEqual([file])
+		expect(Object.entries(fs.readJsonSync(file))).toEqual([
+			['$schema', SCHEMA_URL],
+			['agentUser', 'bot'],
+		])
+		expect(await writeConfigSchema(dir)).toEqual([])
+	})
+
+	it('creates the file seeded from legacy .repo-tooling.json', async () => {
+		const dir = newTmpDir()
+		fs.outputJsonSync(join(dir, '.repo-tooling.json'), {
+			rules: { aiLoop: { agentUser: 'legacy-bot' } },
+		})
+		await writeConfigSchema(dir)
+		expect(fs.readJsonSync(join(dir, '.repo-ai.json'))).toEqual({
+			$schema: SCHEMA_URL,
+			agentUser: 'legacy-bot',
+		})
+	})
+
+	it('refuses to overwrite a file that is not a JSON object', async () => {
+		const dir = newTmpDir()
+		fs.outputFileSync(join(dir, '.repo-ai.json'), '{ nope')
+		await expect(writeConfigSchema(dir)).rejects.toBeInstanceOf(FixerAbort)
+		expect(fs.readFileSync(join(dir, '.repo-ai.json'), 'utf8')).toBe('{ nope')
+	})
+})
