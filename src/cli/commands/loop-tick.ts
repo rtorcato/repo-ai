@@ -357,7 +357,8 @@ export async function runLoopTick(options: LoopTickOptions = {}): Promise<LoopTi
 				result.sendBacks.push({ pr: pr.number, issue, reason: 'ci-red', failing })
 				continue
 			}
-			pending = checks.some((c) => c.bucket === 'pending')
+			// No required check reported yet (e.g. `verify` that `needs:` other jobs) is pending too (#112).
+			pending = checks.length === 0 || checks.some((c) => c.bucket === 'pending')
 		}
 
 		if (has('ai-changes')) {
