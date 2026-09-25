@@ -637,7 +637,8 @@ not wait** — go on to Pass 5. Notes, so it doesn't get "tidied" into breakage:
 ### Pass 5 — report
 
 Never skip this pass, **including on an idle tick or a halt** — an unobservable
-loop is indistinguishable from a dead one. `SUMMARY` is `.summary`
+loop is indistinguishable from a dead one. A halt reports but schedules
+nothing (below). `SUMMARY` is `.summary`
 (`⚠1blocked·⚠1ci-red·2wip·1rev·1ready·1saved`, `⚠` stalls first, or `idle`;
 `saved` counts reviewers not spawned because a docs-only PR got one combined review), adjusted
 only where you deviated from the list; `⚠halt` on a halt. `ai-notes` never
@@ -683,6 +684,16 @@ recurring `CronCreate` job whose prompt is `/ai-loop`:
 | anything else — agents in flight, reviews pending, a PR waiting | 10 minutes | `4,14,24,34,44,54 * * * *` | `600` |
 | anything, with a `loop watch` Monitor running — it wakes the session on change, so the job is only the fallback | 30 minutes | `17,47 * * * *` | `1800` |
 
+**On a halt, don't create or retime the job** — skip the `CronList` below
+entirely. Every `loop guard` halt holds for the life of the session: `GH_TOKEN`
+and `GH_CONFIG_DIR` are read at launch, and a bare clone or linked worktree as
+`ROOT` is structural. The cause wants a relaunch or a repair, not another tick;
+a job created here would re-run `/ai-loop` six times an hour, halting the same
+way each time. **Leave an existing job alone** — don't delete it either: it is
+the smaller change, and it keeps working if the halt clears in this session
+(say `core.bare` was repaired). Still notify and write the status file, with
+`⚠halt` and an empty third line.
+
 `CronList` first, then:
 
 - **No `/ai-loop` job** → `CronCreate({cron, prompt: "/ai-loop", recurring: true})`.
@@ -705,6 +716,7 @@ statusline say `next 9m` instead of leaving you to guess:
 
 ```bash
 NEXT=$(( $(date +%s) + DELAY ))   # ponytail: approximate — the job fires on its cron minutes
+[ "$SUMMARY" = "⚠halt" ] && NEXT=""   # a halt schedules nothing
 printf '%s\n%s\n%s\n' "$SUMMARY" "$SUGGESTED" "$NEXT" > "$STATUS"
 ```
 
@@ -712,7 +724,10 @@ Print `SUMMARY` plus at most five lines — handed over, cleaned up, sent to
 review, picked up, blocked — marking handoffs carrying `ai-notes`, and any
 `.errors`. Then print `$DIGEST`, unless `$SUGGESTED` is empty or equals
 `$PREV_SUGGESTED`. **End with exactly one line saying what happens next:**
-`Next tick: every 10m — say "stop the loop" to end it` (or `every 30m`).
+`Next tick: every 10m — say "stop the loop" to end it` (or `every 30m`). On a
+halt, name the fix instead: `Next tick: none — relaunch as <agentUser>, then
+/ai-loop` for an identity mismatch, or `Next tick: none — run /ai-loop from the
+main checkout` for a bare clone or linked worktree.
 
 ---
 
