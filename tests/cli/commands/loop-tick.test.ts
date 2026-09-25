@@ -55,7 +55,8 @@ const pr = (
 
 interface World {
 	prs?: ReturnType<typeof pr>[]
-	wip?: number[]
+	/** Open ai-wip issues: a number, or `{ number, body }` when the body matters. */
+	wip?: (number | { number: number; body: string })[]
 	/** Closed issues still labelled ai-wip. */
 	closedWip?: number[]
 	suggested?: { number: number; updatedAt: string; labels: { name: string }[] }[]
@@ -109,9 +110,9 @@ function fakeGh(w: World): GhExec {
 		}
 		if (a === 'issue' && args.includes('ai-wip'))
 			return ok(
-				(args.includes('closed') ? (w.closedWip ?? []) : (w.wip ?? [])).map((number) => ({
-					number,
-				}))
+				(args.includes('closed') ? (w.closedWip ?? []) : (w.wip ?? [])).map((i) =>
+					typeof i === 'number' ? { number: i } : i
+				)
 			)
 		if (a === 'issue' && args.includes('ai-suggested')) return ok(w.suggested ?? [])
 		if (a === 'pr' && b === 'list') return ok(args.includes('--head') ? [] : (w.prs ?? []))
@@ -274,6 +275,27 @@ describe('runLoopTick', () => {
 			}),
 		})
 		expect(r.pickups.map((p) => p.number)).toEqual([51, 53, 50, 52])
+	})
+
+	it('drops a candidate naming a file an ai-wip issue already names (#120)', async () => {
+		const root = checkout(newTmpDir())
+		const issue = (number: number, body: string) => ({
+			number,
+			title: `#${number}`,
+			body,
+			labels: [],
+			author_association: 'OWNER',
+		})
+		const r = await runLoopTick({
+			root,
+			env: {},
+			now: NOW,
+			gh: fakeGh({
+				wip: [{ number: 116, body: 'Edit `src/cli/commands/loop-tick.ts`.' }],
+				queue: [issue(115, 'Touches `loop-tick.ts` too.'), issue(117, 'Only `README.md`.')],
+			}),
+		})
+		expect(r.pickups.map((p) => p.number)).toEqual([117])
 	})
 
 	it('waits on a BLOCKED PR whose required checks are still pending', async () => {
