@@ -3,10 +3,18 @@ import chalk from 'chalk'
 import inquirer from 'inquirer'
 import { FixerAbort } from '../../base/fixer-abort.js'
 import { applyLoopLabels } from '../../base/labels.js'
+import {
+	acknowledgementPath,
+	isAcknowledged,
+	NOTICE,
+	RISKS_URL,
+	recordAcknowledgement,
+} from '../../base/notice.js'
 import type { CheckResult } from '../../base/types.js'
 import { printResults, runDoctor } from './doctor.js'
 import { FIXERS, type FixOptions } from './fix.js'
 import { configuredAgentUser } from './loop-guard.js'
+import { getToolVersion } from '../utils/version.js'
 
 /**
  * `repo-ai setup` (#12): the loop's fixers in onboarding order, asking before
@@ -100,15 +108,47 @@ async function askToRun(target: string): Promise<boolean> {
 	return Boolean(run)
 }
 
+/**
+ * Show the cost and liability notice and ask `Continue? (y/N)` (#45), once per
+ * machine and again whenever the notice text changes. `--yes` / `--json`
+ * count as acceptance, and the notice says so.
+ */
+export async function acknowledgeNotice(
+	options: FixOptions,
+	deps: { file?: string; ask?: () => Promise<boolean> } = {}
+): Promise<boolean> {
+	const file = deps.file ?? acknowledgementPath()
+	if (await isAcknowledged(file)) return true
+	const assumeYes = Boolean(options.yes || options.json)
+	console.error(chalk.yellow.bold('Costs and liability.'), NOTICE)
+	console.error(`Full text: ${RISKS_URL}`)
+	console.error(chalk.dim('Running with --yes or --json counts as accepting this notice.\n'))
+	if (!assumeYes && !(await (deps.ask ?? askToContinue)())) return false
+	await recordAcknowledgement(file, await getToolVersion())
+	return true
+}
+
+async function askToContinue(): Promise<boolean> {
+	const { ok } = await inquirer.prompt([
+		{ type: 'confirm', name: 'ok', message: 'Continue?', default: false },
+	])
+	return Boolean(ok)
+}
+
 export async function setupCommand(options: FixOptions): Promise<void> {
 	const directory = path.resolve(options.dir)
+	if (!(await acknowledgeNotice(options))) {
+		console.error('Setup cancelled: the notice was not accepted.')
+		process.exitCode = 1
+		return
+	}
 	const steps = await runSetup(directory, options)
 	const doctor: CheckResult[] = await runDoctor(directory, options.skillsDir)
 	const failed =
 		steps.some((s) => s.status === 'failed') ||
 		doctor.some((r) => r.status === 'drift' || r.status === 'missing')
 	if (options.json) {
-		console.log(JSON.stringify({ directory, steps, doctor }, null, 2))
+		console.log(JSON.stringify({ directory, acknowledged: true, steps, doctor }, null, 2))
 	} else {
 		for (const s of steps) {
 			if (s.status === 'applied')

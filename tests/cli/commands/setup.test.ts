@@ -2,7 +2,13 @@ import { join } from 'node:path'
 import fs from 'fs-extra'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { FixerAbort } from '../../../src/base/fixer-abort.js'
-import { runSetup, type StepRun, setupSteps } from '../../../src/cli/commands/setup.js'
+import { NOTICE, NOTICE_HASH } from '../../../src/base/notice.js'
+import {
+	acknowledgeNotice,
+	runSetup,
+	type StepRun,
+	setupSteps,
+} from '../../../src/cli/commands/setup.js'
 import { useTmpDir } from '../../helpers/tmp-dir.js'
 
 const newTmpDir = useTmpDir()
@@ -73,5 +79,38 @@ describe('setup', () => {
 			message: 'not signed in',
 			hint: 'gh auth login',
 		})
+	})
+})
+
+describe('setup notice', () => {
+	beforeEach(() => {
+		vi.spyOn(console, 'error').mockImplementation(() => {})
+	})
+
+	it('asks once, defaults to declining, and asks again when the text changes', async () => {
+		const file = join(newTmpDir(), 'repo-ai', 'acknowledged')
+		expect(await acknowledgeNotice({ dir: '.' }, { file, ask: async () => false })).toBe(false)
+		expect(await fs.pathExists(file)).toBe(false)
+
+		expect(await acknowledgeNotice({ dir: '.' }, { file, ask: async () => true })).toBe(true)
+		const ask = vi.fn(async () => false)
+		expect(await acknowledgeNotice({ dir: '.' }, { file, ask })).toBe(true)
+		expect(ask).not.toHaveBeenCalled()
+
+		fs.writeJsonSync(file, { version: '0.0.1', hash: 'old-notice' })
+		expect(await acknowledgeNotice({ dir: '.' }, { file, ask })).toBe(false)
+	})
+
+	it('treats --yes as acceptance and records it', async () => {
+		const file = join(newTmpDir(), 'acknowledged')
+		const ask = vi.fn(async () => false)
+		expect(await acknowledgeNotice({ dir: '.', yes: true }, { file, ask })).toBe(true)
+		expect(ask).not.toHaveBeenCalled()
+		expect(fs.readJsonSync(file).hash).toBe(NOTICE_HASH)
+	})
+
+	it('matches the README and docs copies', () => {
+		for (const f of ['README.md', 'apps/docs/docs/intro.md', 'apps/docs/docs/ai-loop.md'])
+			expect(fs.readFileSync(f, 'utf8')).toContain(NOTICE)
 	})
 })
