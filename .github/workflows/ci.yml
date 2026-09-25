@@ -27,7 +27,41 @@ permissions:
   contents: read
 
 jobs:
+  # Decides whether the test matrix runs. A PR is docs-only when every changed
+  # file is README.md or under apps/docs/; anything else (skills/, workflows/,
+  # src/, tests/, .github/, root config) is code. push and workflow_dispatch
+  # always count as code. An empty diff counts as code too.
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: github.event_name == 'pull_request'
+        with:
+          fetch-depth: 0
+      - id: diff
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" != pull_request ]; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          files="$(git diff --name-only "$BASE...$HEAD")"
+          printf '%s\n' "$files"
+          if [ -n "$files" ] && ! grep -Evq '^(README\.md|apps/docs/.+)$' <<< "$files"; then
+            echo "code=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "code=true" >> "$GITHUB_OUTPUT"
+          fi
+
   test:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     name: test (${{ matrix.node }})
     runs-on: ubuntu-latest
     strategy:
@@ -67,13 +101,24 @@ jobs:
 
   # The required status check. Branch protection names `verify`, so this one
   # job stands for every matrix leg: it fails unless all of them succeeded,
-  # including when one was cancelled or skipped.
+  # including when one was cancelled — and skipped, unless the skip was earned.
+  # Passes only when `changes` succeeded AND either it found a docs-only PR
+  # (code == 'false') or `test` succeeded. A failed or cancelled `changes`, or
+  # a cancelled/failed/skipped `test` on a code change, fails `verify`: a
+  # skipped required check counts as passing, so the skip must never be a
+  # side effect of something going wrong.
   verify:
-    needs: test
+    needs: [changes, test]
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - run: test "${{ needs.test.result }}" = success
+      - env:
+          CHANGES: ${{ needs.changes.result }}
+          CODE: ${{ needs.changes.outputs.code }}
+          TEST: ${{ needs.test.result }}
+        run: |
+          echo "changes=$CHANGES code=$CODE test=$TEST"
+          test "$CHANGES" = success && { test "$CODE" = false || test "$TEST" = success; }
 
   # Publishes @rtorcato/repo-ai with semantic-release. The `release`
   # environment requires a maintainer's approval, so a merge to main never
