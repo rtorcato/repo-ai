@@ -389,9 +389,9 @@ statusline segment (`npx @rtorcato/repo-ai fix statusline`) shows it:
 by hand, and nothing once the last tick is over 35 minutes old. `/ai-loop-status`
 reports the same.
 
-**Don't want to wait?** `/ai-tick` runs one tick now, say after merging a PR or
-labelling an issue `ai-ready`. It schedules nothing, so a running loop keeps its
-own wakeup.
+**Don't want to wait?** A plain `/ai-loop` runs one tick now, say after merging a
+PR or labelling an issue `ai-ready`. It schedules nothing, so a running loop keeps
+its own wakeup.
 
 **Wake on change instead.** A tick is a full LLM turn, so ticking faster costs
 more tokens. `loop watch` polls without the LLM: every `pollSeconds` it computes

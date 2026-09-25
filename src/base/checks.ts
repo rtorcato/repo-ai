@@ -1,6 +1,7 @@
 import {
 	claudeSkillStatus,
 	resolveSkillsDir,
+	RETIRED_SKILLS,
 	SHIPPED_SKILLS,
 	skillDiffCommand,
 	type SkillStatus,
@@ -117,13 +118,9 @@ export async function checkRequiredSkills(
 	skillsDir?: string
 ): Promise<CheckResult> {
 	const check = 'Required skills'
-	// ai-loop was ai-issue-loop before #56, and absorbed ai-workflow in #87;
-	// existing configs still name them.
-	names = [
-		...new Set(
-			names.map((name) => (name === 'ai-issue-loop' || name === 'ai-workflow' ? 'ai-loop' : name))
-		),
-	]
+	// ai-loop was ai-issue-loop before #56, and absorbed ai-workflow (#87) and
+	// ai-tick (#89); existing configs still name them.
+	names = [...new Set(names.map((name) => (RETIRED_SKILLS.includes(name) ? 'ai-loop' : name)))]
 	const hint =
 		'Run `npx @rtorcato/repo-ai fix claude-skills` yourself to install or refresh them — add `--force-skills` to overwrite a locally modified copy. It writes to `~/.claude`, outside this repo, so nothing runs it for you.'
 	// A name outside SHIPPED_SKILLS has no shipped asset to hash against, and
