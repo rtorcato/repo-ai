@@ -151,7 +151,7 @@ directory and run just the loop's session as the bot:
 GH_TOKEN=$(gh auth token --user <agentUser>) claude    # this session only
 ```
 
-Then start the loop as usual (`/loop /ai-loop`). `gh` and git pushes in that
+Then start the loop as usual (`/ai-loop`). `gh` and git pushes in that
 session run as the bot; every other terminal stays you. To pick up an existing
 conversation, add `--continue` or `--resume`.
 
@@ -376,22 +376,24 @@ These exist because the loop runs unattended against a monthly usage cap.
 ## Driving it
 
 ```
-/loop /ai-loop
+/ai-loop
 ```
 
-No interval: the loop paces itself. Each tick schedules the next, 10 minutes out
-while agents or reviews are in flight and 30 minutes when idle, so a quiet repo
-costs two ticks an hour. A fixed `/loop 15m /ai-loop` still works.
+That's the only thing to type. The loop paces itself: each tick keeps one
+recurring job in this session, firing every 10 minutes while agents or reviews
+are in flight and every 30 when idle, so a quiet repo costs two ticks an hour.
+The job ends with the session and expires after 7 days. Say "stop the loop" to
+end it sooner. Don't wrap it in `/loop`.
 
 **Is a tick coming?** Every tick ends with a `Next tick:` line, and the
 statusline segment (`npx @rtorcato/repo-ai fix statusline`) shows it:
-`🤖 1wip · next 9m` while the loop runs, `🤖 1wip · manual` after a tick you ran
-by hand, and nothing once the last tick is over 35 minutes old. `/ai-loop-status`
+`🤖 1wip · next 9m` while the loop runs, and nothing once the last tick is over
+35 minutes old. `/ai-loop-status`
 reports the same.
 
-**Don't want to wait?** A plain `/ai-loop` runs one tick now, say after merging a
-PR or labelling an issue `ai-ready`. It schedules nothing, so a running loop keeps
-its own wakeup.
+**Don't want to wait?** Type `/ai-loop` again to tick now, say after merging a PR
+or labelling an issue `ai-ready`. It reuses the running schedule rather than
+adding a second one.
 
 **Wake on change instead.** A tick is a full LLM turn, so ticking faster costs
 more tokens. `loop watch` polls without the LLM: every `pollSeconds` it computes
@@ -441,8 +443,8 @@ extra tooling.
 Ticks fire only while the REPL is idle. Stop by asking the session to stop the
 loop, or just remove the `ai-ready` labels — the loop then idles harmlessly.
 
-Run `/ai-loop` **manually** three or four times against one trivial issue
-before letting the timer drive it.
+On a new repo, start with one trivial `ai-ready` issue and watch the first few
+ticks before leaving the loop alone.
 
 ## Safety
 

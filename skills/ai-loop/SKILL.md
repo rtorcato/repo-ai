@@ -2,14 +2,15 @@
 name: ai-loop
 model: sonnet
 description: |
-  **The entry point for the `ai-ready` issue pipeline — start here, as
-  `/loop /ai-loop`.** One stateless tick over the GitHub label state: answer
-  `ai-changes` with a fix round, hand passed issue PRs to the human, clean up
-  merged worktrees, reap stalled agents, and implement the `ai-ready` queue in
-  parallel worktrees, each PR reviewed by two agents. Use when the user says
-  "run the AI pipeline", "work the ai-ready issues", "burst the queue", "babysit
-  the AI PRs", "tick now", "run a tick", or invokes `/ai-loop`. It never merges; Dependabot PRs are handled
-  by their own workflow, outside this loop.
+  **The entry point for the `ai-ready` issue pipeline — start here.** Keeps
+  itself going on a session-scoped schedule, no `/loop` needed. One stateless
+  tick over the GitHub label state: answer `ai-changes` with a fix round, hand
+  passed issue PRs to the human, clean up merged worktrees, reap stalled
+  agents, and implement the `ai-ready` queue in parallel worktrees, each PR
+  reviewed by two agents. Use when the user says "run the AI pipeline", "work
+  the ai-ready issues", "start the loop", "tick now", "babysit the AI PRs", or
+  invokes `/ai-loop`. It never merges; Dependabot PRs are handled by their own
+  workflow, outside this loop.
   GitHub only (`gh`) — not GitLab.
 ---
 
@@ -644,28 +645,39 @@ osascript -e "display notification \"$SUMMARY\" with title \"ai-loop\" subtitle 
   || notify-send "ai-loop" "$OWNER_REPO: $SUMMARY" 2>/dev/null || true
 ```
 
-**Decide the next tick.** How this tick was started decides it — never whether
-the `ScheduleWakeup` tool happens to be available, which it is in ordinary
-sessions too:
+**Keep the loop going.** `/ai-loop` is the whole entry point: it schedules its
+own next tick, so the user never types `/loop`. **Never call `ScheduleWakeup`**
+— it only works under `/loop`. Instead, keep exactly **one** session-scoped
+recurring `CronCreate` job whose prompt is `/ai-loop`:
 
-| Started by | `DELAY` (seconds) |
-|---|---|
-| Self-paced `/loop /ai-loop` (no interval) | `1800` when `SUMMARY` is `idle` — a new `ai-ready` issue can wait half an hour — else `600`: agents in flight, reviews pending, or a PR waiting |
-| Self-paced, with a `loop watch` Monitor running | `1800` always — the watcher wakes the session on change; this wakeup is only the fallback |
-| Fixed `/loop <interval> /ai-loop` | that interval, in seconds; `/loop` schedules it |
-| A plain `/ai-loop` — a tick run by hand, even inside a session a `/loop` is driving | empty — **never call `ScheduleWakeup`**; a running loop keeps its own wakeup, and a second would double every tick after this |
+| `SUMMARY` | Cadence | `cron` | `DELAY` |
+|---|---|---|---|
+| `idle` — a new `ai-ready` issue can wait half an hour | 30 minutes | `17,47 * * * *` | `1800` |
+| anything else — agents in flight, reviews pending, a PR waiting | 10 minutes | `4,14,24,34,44,54 * * * *` | `600` |
+| anything, with a `loop watch` Monitor running — it wakes the session on change, so the job is only the fallback | 30 minutes | `17,47 * * * *` | `1800` |
+
+`CronList` first, then:
+
+- **No `/ai-loop` job** → `CronCreate({cron, prompt: "/ai-loop", recurring: true})`.
+- **One, at the right cadence** → leave it. This is also why running `/ai-loop`
+  by hand is "tick now": the job is reused, never stacked.
+- **One at the other cadence** → `CronDelete` it, then create the right one.
+- **More than one** → delete all but one; two jobs double every tick.
+
+A recurring job, not a chain of one-shots: a tick that dies before this pass
+leaves the job firing, so the loop recovers on its own. Jobs end with the
+session and expire after 7 days. **Never delete the last job from here** — an
+idle loop is cheap, and a stopped one misses the next `ai-ready` issue. Only
+the user stops it ("stop the loop" → `CronDelete`).
 
 Write the status file **last** — `SUMMARY`, `SUGGESTED`, and when the next tick
 is due (empty when none). Its age is the liveness signal: ticks run at most 30
 minutes apart, so a file older than about 35 minutes means the loop has stopped,
 and a statusline should hide it past that. The third line is what lets a
-statusline say `next 9m` or `manual` instead of leaving you to guess:
+statusline say `next 9m` instead of leaving you to guess:
 
 ```bash
-NEXT=${DELAY:+$(( $(date +%s) + DELAY ))}
-# A hand-run tick keeps a still-pending wakeup, so the statusline says `next 9m`, not `manual`.
-PREV_NEXT=$(sed -n 3p "$STATUS" 2>/dev/null)
-[ -z "$NEXT" ] && [ "${PREV_NEXT:-0}" -gt "$(date +%s)" ] 2>/dev/null && NEXT=$PREV_NEXT
+NEXT=$(( $(date +%s) + DELAY ))   # ponytail: approximate — the job fires on its cron minutes
 printf '%s\n%s\n%s\n' "$SUMMARY" "$SUGGESTED" "$NEXT" > "$STATUS"
 ```
 
@@ -673,38 +685,26 @@ Print `SUMMARY` plus at most five lines — handed over, cleaned up, sent to
 review, picked up, blocked — marking handoffs carrying `ai-notes`, and any
 `.errors`. Then print `$DIGEST`, unless `$SUGGESTED` is empty or equals
 `$PREV_SUGGESTED`. **End with exactly one line saying what happens next:**
-`Next tick: in 10m (self-paced)`, `Next tick: in 15m (/loop)`,
-`Next tick: in 9m (already scheduled)` for a hand-run tick that kept one, or
-`Next tick: none scheduled — run /ai-loop, or /loop /ai-loop to keep it going`.
-
-**Then, only under a self-paced `/loop`, schedule it** — `ScheduleWakeup` with
-`prompt: "/ai-loop"`, `delaySeconds: $DELAY`, `noop: true` when `SUMMARY`
-== `PREV` (else `false`, so quiet stretches collapse in the terminal), and a
-one-line `reason` naming what the next tick is for, e.g. `2 reviews and 1
-implementer in flight`. Never stop the loop from here — an idle loop is cheap,
-and a stopped one misses the next `ai-ready` issue.
+`Next tick: every 10m — say "stop the loop" to end it` (or `every 30m`).
 
 ---
 
 ## Driving it
 
 ```
-/loop /ai-loop
+/ai-loop
 ```
 
-That is the whole entry point: the first tick implements the `ai-ready` queue,
-and the ticks after it carry those PRs through review, fix rounds and cleanup.
-A plain `/ai-loop` runs one tick and schedules nothing — a model cannot start
-`/loop` itself, so the user types it. No interval: the loop is self-paced. Each tick's Pass 5 schedules the next one,
-10 minutes out while work is in flight and 30 minutes when idle. A fixed
-`/loop 15m /ai-loop` still works; Pass 5 records its interval but schedules
-nothing itself.
+That is the whole entry point, and the only thing to type. The first tick
+implements the `ai-ready` queue and schedules the rest itself (Pass 5): every
+10 minutes while work is in flight, every 30 when idle. The ticks after it
+carry the PRs through review, fix rounds and cleanup. Type `/ai-loop` again any
+time to tick now — say after merging a PR — without adding a second schedule.
+Don't wrap it in `/loop`.
 
 **Is a tick coming?** Every tick ends with a `Next tick:` line, and the statusline
 segment (`repo-ai fix statusline`) shows it: `🤖 1wip · next 9m` while the loop
-is running, `🤖 1wip · manual` when nothing is scheduled, and nothing at all
-once the last tick is over 35 minutes old. A plain `/ai-loop` runs one tick now and
-schedules nothing, so a running loop keeps its own wakeup.
+is running, and nothing at all once the last tick is over 35 minutes old.
 
 **Wake on change, not on a timer.** A tick is a full LLM turn; a poll needs no
 LLM. Run the watcher through the **Monitor** tool, where each stdout line wakes
@@ -717,13 +717,15 @@ npx @rtorcato/repo-ai loop watch --root "$ROOT"
 It computes the tick's work list every `pollSeconds` (`.repo-ai.json`, default
 180, floor 60) and prints one line only when the actionable part changes — a
 halt once, until it clears. On each line, run a tick. While it runs, Pass 5
-schedules the fallback wakeup 30 minutes out. Re-arm it when the Monitor
+keeps the job at the 30-minute fallback cadence. Re-arm it when the Monitor
 expires at 30 minutes. At the default that is 20 polls an hour, each a few
 GitHub API calls, against the 5,000/h limit.
 
-Ticks fire only while the REPL is idle. Stop by asking the session to stop the
-loop, or remove the `ai-ready` labels and let it idle. On a new repo, run
-`/ai-loop` **manually** three or four times against one trivial issue first.
+Ticks fire only while the REPL is idle, and only in this session: closing it
+stops the loop. Stop it sooner by asking the session to stop the loop
+(`CronDelete` the `/ai-loop` job, and `TaskStop` any `loop watch` Monitor), or
+remove the `ai-ready` labels and let it idle. On a new repo, start it
+with one trivial `ai-ready` issue and watch the first few ticks before leaving it.
 
 ## Repo prerequisites
 
