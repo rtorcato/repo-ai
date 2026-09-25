@@ -5,6 +5,7 @@ import fs from 'fs-extra'
 import { readConfig } from '../../base/config.js'
 import { type GitExec, realGitExec } from '../../base/git.js'
 import { type GhExec, realGhExec } from '../../base/gh.js'
+import { symlinkDirectories } from './loop-worktree.js'
 
 /**
  * `repo-tooling loop guard` — the most dangerous mechanics of the
@@ -130,6 +131,7 @@ export type RebuildOutcome =
 	| 'not-requested'
 	| 'skipped-no-lockfile'
 	| 'skipped-root-unusable'
+	| 'skipped-not-linked'
 	| 'deferred'
 	| 'rebuilt'
 	| 'rebuild-failed'
@@ -305,6 +307,9 @@ export async function runLoopGuard(options: LoopGuardOptions = {}): Promise<Loop
  * - **`removed`** — set by every removal path, merged-PR cleanup *and* stall
  *   reaping. A reaped worktree needs this most: its agent died mid-command.
  * - **`pnpm-lock.yaml`** — non-pnpm repos skip the whole thing.
+ * - **`worktree.symlinkDirectories`** — with none declared, `loop worktree add`
+ *   links nothing and each worktree installs its own modules, so the main
+ *   checkout's are never shared and never at risk: skip, don't defer (#103).
  * - **no live worktrees** — the rebuild *purges* the shared modules dir, which
  *   would be yanked out from under any agent still running in a surviving
  *   worktree. Deferring costs a broken main checkout until the last worktree
@@ -320,6 +325,7 @@ export async function decideRebuild(input: {
 	// Nothing runs against a root we are about to halt the tick over.
 	if (input.exitCode !== 0) return 'skipped-root-unusable'
 	if (!(await fs.pathExists(path.join(input.root, 'pnpm-lock.yaml')))) return 'skipped-no-lockfile'
+	if ((await symlinkDirectories(input.root)).length === 0) return 'skipped-not-linked'
 	return input.live.length > 0 ? 'deferred' : 'rebuilt'
 }
 
