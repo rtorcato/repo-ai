@@ -114,7 +114,12 @@ export function updateStatusSummary(
 	let text: string
 	try {
 		text = fs.readFileSync(file, 'utf8')
-	} catch {
+	} catch (err) {
+		// Only a missing file starts from blank; any other read error would wipe lines 2-3.
+		if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
+			console.error(chalk.yellow(`status read failed: ${(err as Error).message}`))
+			return
+		}
 		if (!fs.existsSync(dir)) return
 		text = '\n\n\n'
 	}

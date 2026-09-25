@@ -178,6 +178,15 @@ describe('status file summary (#114)', () => {
 		fs.ensureDirSync(join(root, '.claude'))
 		expect(await watchStatus(root, [tick()])).toEqual(['idle\n\n\n'])
 	})
+
+	it('does not write when the read fails for a reason other than ENOENT', async () => {
+		const root = newTmpDir()
+		fs.ensureDirSync(statusFile(root)) // a directory: readFileSync throws EISDIR
+		const warn = vi.spyOn(console, 'error').mockImplementation(() => {})
+		expect(await watchStatus(root, [tick()])).toEqual([])
+		expect(String(warn.mock.calls[0][0])).toContain('status read failed')
+		warn.mockRestore()
+	})
 })
 
 describe('describeWork', () => {
