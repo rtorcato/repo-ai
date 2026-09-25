@@ -169,6 +169,18 @@ export function isDocsOnly(files: string[]): boolean {
 	)
 }
 
+/**
+ * Basenames of the files an issue body names in backticks, lowercased: `src/a/loop-tick.ts`
+ * and `loop-tick.ts` collide. Over-matching only delays a pickup a tick.
+ */
+// ponytail: backticked spans with an extension only; bare paths slip through to Pass 4's own judgment.
+export function namedFiles(body: string): string[] {
+	return [...body.matchAll(/`([^`\s]+)`/g)]
+		.map((m) => (m[1] ?? '').split('/').pop() ?? '')
+		.filter((f) => /^[\w.-]*[\w-]\.[a-z]{1,5}$/i.test(f))
+		.map((f) => f.toLowerCase())
+}
+
 const issueOf = (head: string) => Number(head.match(/^(?:worktree-)?ai-(\d+)-/)?.[1]) || null
 
 function empty(env: LoopEnv): LoopTickResult {
@@ -310,7 +322,7 @@ export async function runLoopTick(options: LoopTickOptions = {}): Promise<LoopTi
 		'--json',
 		'number,headRefName,labels,autoMergeRequest,author,body,statusCheckRollup',
 	])
-	const wip = await json<{ number: number }[]>([
+	const wip = await json<{ number: number; body?: string }[]>([
 		'issue',
 		'list',
 		'--label',
@@ -320,7 +332,7 @@ export async function runLoopTick(options: LoopTickOptions = {}): Promise<LoopTi
 		'--limit',
 		'100',
 		'--json',
-		'number',
+		'number,body',
 	])
 	result.releaseGated = await releaseGated(gh, ownerRepo, root)
 
@@ -481,6 +493,8 @@ export async function runLoopTick(options: LoopTickOptions = {}): Promise<LoopTi
 		`repos/${ownerRepo}/issues?labels=ai-ready&state=open&per_page=100`,
 	])
 	const isBug = (i: RestIssue) => i.labels.some((l) => l.name === 'bug')
+	// A candidate sharing a file with an in-flight issue waits its turn (#120).
+	const busy = new Set((wip ?? []).flatMap((i) => namedFiles(i.body ?? '')))
 	result.pickups = (queue ?? [])
 		.filter((i) => !i.pull_request)
 		.filter((i) => !i.labels.some((l) => ['ai-wip', 'ai-blocked', 'holding'].includes(l.name)))
@@ -488,6 +502,7 @@ export async function runLoopTick(options: LoopTickOptions = {}): Promise<LoopTi
 		.filter((i) => TRUSTED.has(i.author_association))
 		// Bugs first; sort is stable, so the API's order holds within each group (#108).
 		.sort((a, b) => Number(isBug(b)) - Number(isBug(a)))
+		.filter((i) => !namedFiles(i.body ?? '').some((f) => busy.has(f)))
 		.map(({ number, title, body }) => ({ number, title, body: body ?? '' }))
 
 	// Slots count what is still in flight once this tick's cleanup and reaping land.
