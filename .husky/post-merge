@@ -1,0 +1,10 @@
+# Rebuild dist/ when a pull changed src/, so `npx @rtorcato/repo-ai` runs current code.
+# Never fails the pull: post-merge can't undo the merge anyway.
+if git diff --quiet ORIG_HEAD HEAD -- src/ 2>/dev/null; then
+  echo "dist/ unchanged"
+elif pnpm run build >/dev/null 2>&1; then
+  echo "rebuilt dist/"
+else
+  echo "⚠️  post-merge: pnpm build failed; dist/ may be stale. Run 'pnpm build'."
+fi
+exit 0
