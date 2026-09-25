@@ -87,6 +87,7 @@ function fakeGh(w: World): GhExec {
 			if (b === 'user') return ok('me-bot\n')
 			if (b === 'repos/acme/widget') return ok('acme\n')
 			if (b === 'repos/acme/widget/environments') return ok({ environments: [] })
+			if (b === 'repos/acme/widget/assignees/agent-bot') return ok('')
 			if (b?.startsWith('repos/acme/widget/issues?')) return ok(w.queue ?? [])
 			const timeline = b?.match(/issues\/(\d+)\/timeline/)
 			if (timeline) {
@@ -249,6 +250,26 @@ describe('runLoopTick', () => {
 		expect(r.slots).toBe(3)
 		expect(r.idle).toBe(false)
 		expect(r.summary).toBe('⚠1blocked·⚠1ci-red·4wip·6rev·1ready')
+	})
+
+	it('adopts any unlabelled agentUser PR, header or not (#115)', async () => {
+		const root = checkout(newTmpDir())
+		const r = await runLoopTick({
+			root,
+			env: { AI_LOOP_AGENT: 'agent-bot' },
+			now: NOW,
+			gh: fakeGh({
+				prs: [
+					pr(1, 'fix/no-header', [], { author: 'Agent-Bot', body: 'plain' }),
+					pr(2, 'fix/header', [], { author: 'agent-bot', body: '🤖 *Opened.*' }),
+					pr(3, 'fix/owner', [], { author: 'me-bot', body: '🤖 *Opened.*' }),
+					pr(4, 'fix/ready', ['merge-ready'], { author: 'agent-bot' }),
+					pr(5, 'dependabot/npm/x', [], { author: 'agent-bot' }),
+				],
+			}),
+		})
+		expect(r.env.agentUser).toBe('agent-bot')
+		expect(r.adopt).toEqual([1, 2])
 	})
 
 	it('picks up bug issues first, keeping queue order within each group (#108)', async () => {

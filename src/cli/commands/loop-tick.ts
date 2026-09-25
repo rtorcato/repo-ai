@@ -350,9 +350,13 @@ export async function runLoopTick(options: LoopTickOptions = {}): Promise<LoopTi
 
 		const loopPr = has('merge-ready') || [...labels].some((l) => l.startsWith('ai-'))
 		if (!loopPr) {
-			// The 🤖 header is the discriminator: every agent is the owner's login.
-			const mine = pr.author?.login.toLowerCase() === env.me.toLowerCase()
-			if (env.me && mine && (pr.body ?? '').startsWith('🤖 ')) result.adopt.push(pr.number)
+			// With agentUser, `loop guard` pins the tick to that account, so its PRs are the loop's (#115).
+			// Without it every agent is the owner's login, and the 🤖 header is the discriminator.
+			const author = pr.author?.login.toLowerCase()
+			const adopt = env.agentUser
+				? author === env.agentUser.toLowerCase()
+				: !!env.me && author === env.me.toLowerCase() && (pr.body ?? '').startsWith('🤖 ')
+			if (adopt) result.adopt.push(pr.number)
 			continue
 		}
 
