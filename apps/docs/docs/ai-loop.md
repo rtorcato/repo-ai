@@ -421,6 +421,23 @@ can't go below 60. A halt prints once, and a failed poll is skipped. An
 `agentUser` mismatch does not halt the watcher; see
 [Running reviewers as a second identity](#running-reviewers-as-a-second-identity).
 
+### Watching the loop from GitHub
+
+Labels are the loop's whole state, so GitHub's own search works as a live board.
+Nothing to install. Save these as issue or PR searches in the repo:
+
+| View | Search |
+|---|---|
+| Being implemented | `is:open is:issue label:ai-wip` |
+| In agent review | `is:open is:pr label:ai-review` |
+| Waiting for you to merge | `is:open is:pr label:merge-ready assignee:@me` |
+| Stuck, needs a human | `is:open label:ai-blocked` |
+| Queued for an agent | `is:open is:issue label:ai-ready` |
+
+For a board, create a GitHub Project, turn on its built-in *Auto-add* workflow
+for this repo, and group the view by label. Columns then follow the loop with no
+extra tooling.
+
 Ticks fire only while the REPL is idle. Stop by asking the session to stop the
 loop, or just remove the `ai-ready` labels — the loop then idles harmlessly.
 
