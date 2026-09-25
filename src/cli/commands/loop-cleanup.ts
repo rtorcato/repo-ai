@@ -111,7 +111,7 @@ export async function runLoopCleanup(options: LoopCleanupOptions = {}): Promise<
 			if (subjects === null) {
 				// Best-effort: a failed fetch leaves origin/main stale, which can
 				// only keep a worktree, never remove one wrongly.
-				await git(['fetch', '--prune', 'origin'])
+				await git(['fetch', '--prune', '--no-write-fetch-head', 'origin'])
 				const log = await git(['log', 'origin/main', `-n${SQUASH_WINDOW}`, '--format=%s'])
 				subjects = log ? log.split('\n') : []
 			}
