@@ -156,6 +156,14 @@ Then start the loop as usual (`/ai-loop`). `gh` and git pushes in that
 session run as the bot; every other terminal stays you. To pick up an existing
 conversation, add `--continue` or `--resume`.
 
+To make it one word, add an alias to `~/.zshrc` or `~/.bashrc`. Keep the single
+quotes: they defer `$(…)`, so the token is read each time you launch, not once
+when the shell starts:
+
+```bash
+alias claude-ai-loop='GH_TOKEN=$(gh auth token --user <agentUser>) claude'
+```
+
 Either way, first:
 
 1. **Give the bot write access.** Invite it as a collaborator with `push`
