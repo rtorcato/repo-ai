@@ -1,5 +1,6 @@
 import path from 'node:path'
 import { LOGIN } from '../../base/agent-user.js'
+import { DEFAULT_BUDGET_TOKENS, readConfig } from '../../base/config.js'
 import { type GitExec, realGitExec } from '../../base/git.js'
 import { type GhExec, realGhExec } from '../../base/gh.js'
 import { configuredAgentUser, defaultWorktreeRoot } from './loop-guard.js'
@@ -26,6 +27,8 @@ export interface LoopEnv {
 	humanUser: string
 	/** Who `gh` authenticates as. */
 	me: string
+	/** `budgetTokens`, else {@link DEFAULT_BUDGET_TOKENS} — the Workflow scripts' per-tick cap (#41). */
+	budgetTokens: number
 	warnings: string[]
 }
 
@@ -87,8 +90,11 @@ export async function resolveLoopEnv(options: LoopEnvOptions = {}): Promise<Loop
 			])
 		: ''
 	const me = await ghOut(gh, ['api', 'user', '--jq', '.login'])
+	const budgetTokens = root
+		? ((await readConfig(root)).budgetTokens ?? DEFAULT_BUDGET_TOKENS)
+		: DEFAULT_BUDGET_TOKENS
 
-	return { root, worktreeRoot, ownerRepo, agentUser, humanUser, me, warnings }
+	return { root, worktreeRoot, ownerRepo, agentUser, humanUser, me, budgetTokens, warnings }
 }
 
 const VARS: [string, keyof Omit<LoopEnv, 'warnings'>][] = [
@@ -98,11 +104,14 @@ const VARS: [string, keyof Omit<LoopEnv, 'warnings'>][] = [
 	['AGENT_USER', 'agentUser'],
 	['HUMAN_USER', 'humanUser'],
 	['ME', 'me'],
+	['BUDGET_TOKENS', 'budgetTokens'],
 ]
 
 /** `KEY='value'` lines, single-quoted so `eval "$(… loop env)"` is safe. */
 export function toShell(env: LoopEnv): string {
-	return VARS.map(([name, key]) => `${name}='${env[key].replaceAll("'", `'\\''`)}'`).join('\n')
+	return VARS.map(([name, key]) => `${name}='${String(env[key]).replaceAll("'", `'\\''`)}'`).join(
+		'\n'
+	)
 }
 
 export async function loopEnvCommand(options: { dir?: string; json?: boolean }): Promise<void> {

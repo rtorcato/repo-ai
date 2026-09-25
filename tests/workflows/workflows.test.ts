@@ -40,9 +40,21 @@ function compile(script: string) {
 
 type Run = (...hooks: unknown[]) => Promise<unknown>
 
-/** Run a script against stub hooks: `agent` answers from `reply`, keyed by label. */
-function run(name: string, args: unknown, reply: (label: string) => unknown) {
+/** No target set — `total` null, `remaining()` unbounded, matching the real Workflow tool. */
+const UNMETERED_BUDGET = { total: null, spent: () => 0, remaining: () => Number.POSITIVE_INFINITY }
+
+/**
+ * Run a script against stub hooks: `agent` answers from `reply`, keyed by
+ * label. `budget` defaults to an unmetered stub; pass one to exercise a cap.
+ */
+function run(
+	name: string,
+	args: unknown,
+	reply: (label: string) => unknown,
+	budget: unknown = UNMETERED_BUDGET
+) {
 	const spawned: { label: string; phase: string; agentType?: string }[] = []
+	const logs: string[] = []
 	const agent = async (
 		_prompt: string,
 		o: { label: string; phase: string; agentType?: string }
@@ -63,17 +75,18 @@ function run(name: string, args: unknown, reply: (label: string) => unknown) {
 			})
 		)
 	const noop = () => {}
+	const log = (msg: string) => logs.push(msg)
 	const result = (compile(source(name)) as Run)(
 		args,
 		agent,
 		parallel,
 		pipeline,
 		noop,
-		noop,
-		null,
+		log,
+		budget,
 		noop
 	)
-	return result.then((value) => ({ value, spawned }))
+	return result.then((value) => ({ value, spawned, logs }))
 }
 
 describe.each(SHIPPED_WORKFLOWS)('workflows/%s.js', (name) => {
@@ -113,11 +126,56 @@ describe('ai-loop-pass3', () => {
 			{ label: 'code:#58', phase: 'Review', agentType: 'code-reviewer' },
 			{ label: 'both:#59', phase: 'Review', agentType: 'general-purpose' },
 		])
-		expect(value).toEqual([
-			{ label: 'fix:#61', result: { pushed: true } },
-			{ label: 'code:#58', result: { verdict: 'PASS' } },
-			{ label: 'both:#59', result: { verdict: 'PASS' } },
-		])
+		expect(value).toEqual({
+			tasks: [
+				{ label: 'fix:#61', result: { pushed: true } },
+				{ label: 'code:#58', result: { verdict: 'PASS' } },
+				{ label: 'both:#59', result: { verdict: 'PASS' } },
+			],
+			tokensSpent: 0,
+		})
+	})
+
+	it('caps at 8 tasks per tick, fixes first, and logs the rest for the next tick', async () => {
+		const reviews = Array.from({ length: 9 }, (_, n) => ({ label: `code:#${n}`, prompt: 'p' }))
+		const { value, spawned, logs } = await run('ai-loop-pass3', { fixes: [], reviews }, () => ({
+			verdict: 'PASS',
+		}))
+		expect(spawned.map((s) => s.label)).toEqual(reviews.slice(0, 8).map((r) => r.label))
+		expect((value as { tasks: unknown[] }).tasks).toHaveLength(8)
+		expect(logs.join()).toContain('code:#8')
+		expect(logs.join()).toContain('8-task cap')
+	})
+
+	it('stops queuing once the token budget runs out, and logs what it skipped', async () => {
+		const fixes = [
+			{ label: 'fix:#1', prompt: 'p' },
+			{ label: 'fix:#2', prompt: 'p' },
+		]
+		const { spawned, logs } = await run(
+			'ai-loop-pass3',
+			{ fixes, reviews: [], budgetTokens: 40_000 },
+			() => ({ pushed: true }),
+			{ total: null, spent: () => 0, remaining: () => Number.POSITIVE_INFINITY }
+		)
+		expect(spawned.map((s) => s.label)).toEqual(['fix:#1'])
+		expect(logs.join()).toContain('fix:#2')
+		expect(logs.join()).toContain('token budget exhausted')
+	})
+
+	it('also respects a real interactive budget target, not just the config cap', async () => {
+		const fixes = [
+			{ label: 'fix:#1', prompt: 'p' },
+			{ label: 'fix:#2', prompt: 'p' },
+		]
+		const { spawned, logs } = await run(
+			'ai-loop-pass3',
+			{ fixes, reviews: [] },
+			() => ({ pushed: true }),
+			{ total: 40_000, spent: () => 0, remaining: () => 40_000 }
+		)
+		expect(spawned.map((s) => s.label)).toEqual(['fix:#1'])
+		expect(logs.join()).toContain('fix:#2')
 	})
 })
 
@@ -147,7 +205,29 @@ describe('ai-loop-pickup', () => {
 			'general-purpose',
 			'general-purpose',
 		])
-		expect(value).toEqual([{ issue: 1, 0: { passed: true }, 1: { passed: true } }, { issue: 2 }])
+		expect(value).toEqual({
+			issues: [{ issue: 1, 0: { passed: true }, 1: { passed: true } }, { issue: 2 }],
+			tokensSpent: 0,
+		})
+	})
+
+	it('stops queuing past the token budget, spending it on the first issue', async () => {
+		const { value, spawned, logs } = await run(
+			'ai-loop-pickup',
+			{
+				repo: 'o/r',
+				agentUser: '',
+				humanUser: '',
+				namedReviewers: false,
+				budgetTokens: 40_000,
+				issues: [issue(1), issue(2)],
+			},
+			(label) => (label === 'impl:#1' ? { pr: 10 } : { passed: true })
+		)
+		expect(spawned.map((s) => s.label)).toEqual(['impl:#1'])
+		expect((value as { issues: unknown[] }).issues).toEqual([{ issue: 1 }, { issue: 2 }])
+		expect(logs.join()).toContain('impl:#2')
+		expect(logs.join()).toContain('token budget exhausted')
 	})
 })
 

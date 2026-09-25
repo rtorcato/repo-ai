@@ -31,6 +31,8 @@ describe('validateConfig', () => {
 		])
 		expect(validateConfig({ pollSeconds: 30 })).toEqual(['"pollSeconds" must be at least 60'])
 		expect(validateConfig({ pollSeconds: 120 })).toEqual([])
+		expect(validateConfig({ budgetTokens: 500 })).toEqual(['"budgetTokens" must be at least 1000'])
+		expect(validateConfig({ budgetTokens: 200_000 })).toEqual([])
 	})
 })
 

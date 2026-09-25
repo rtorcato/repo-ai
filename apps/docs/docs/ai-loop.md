@@ -80,6 +80,7 @@ optional:
 | `agentUser` | string | none: the loop runs as whoever `gh` is signed in as | `loop guard`, which halts a tick running as anyone else; `loop env`; `fix ai-loop-identity`; `doctor`. |
 | `requiredSkills` | string[] | `[]`: no check | `doctor`, which reports any listed skill that is not installed. Checked only when `agentUser` is set. |
 | `pollSeconds` | integer | `180`; values below `60` are raised to `60` | `loop watch`, between polls. Each poll costs several GitHub API calls against the 5,000/h limit. |
+| `budgetTokens` | integer | `400000`; values below `1000` are ignored | `loop env` (as `BUDGET_TOKENS`), passed to the `ai-loop-pickup` and `ai-loop-pass3` Workflow scripts, which enforce it — an agent past the cap is skipped and `log()`ged, not spawned. |
 
 The schema is [`schemas/repo-ai.json`](https://rtorcato.github.io/repo-ai/repo-ai.json)
 (JSON Schema draft 2020-12), which ships in the npm package too. It sets

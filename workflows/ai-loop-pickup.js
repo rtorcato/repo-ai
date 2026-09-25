@@ -30,11 +30,34 @@ const REVIEWERS = [
 	{ type: 'security-expert', arm: 'sec', pass: 'ai-ok-sec', claim: 'ai-reviewing-sec', lens: 'injection risk, leaked secrets, unsafe shell/SQL construction, and dependency or supply-chain changes' },
 ]
 
-// #41: budget enforcement lands here — trim `args.issues` before anything spawns.
+const DEFAULT_BUDGET_TOKENS = 400_000
+// ponytail: a flat per-agent estimate until real spend data can tune it (#41).
+const AGENT_TOKEN_ESTIMATE = 40_000
+const tokenBudget = args.budgetTokens ?? DEFAULT_BUDGET_TOKENS
+const startSpent = budget.spent()
+// #41: reserve this tick's estimated spend as agents queue, against whichever
+// is tighter: the config cap or a real interactive '+Nk' target.
+// `budget.remaining()` won't move until an agent actually finishes, so
+// `reserved` tracks this tick's own not-yet-spent commitments against it —
+// never silently drop an unaffordable agent, just log it and leave its
+// issue/PR labelled for the next tick to pick up (an implementer skip leaves
+// the issue `ai-wip` for `loop reap` to notice; a reviewer skip leaves the PR
+// `ai-review` for the next tick's Pass 3 to claim normally).
+const ceiling = Math.min(tokenBudget, budget.remaining())
+let reserved = 0
+function afford(label) {
+	if (ceiling - reserved < AGENT_TOKEN_ESTIMATE) {
+		log(`skipped ${label} — token budget exhausted, left for the next tick`)
+		return false
+	}
+	reserved += AGENT_TOKEN_ESTIMATE
+	return true
+}
+
 const results = await pipeline(
 	args.issues,
 
-	(i) => agent(
+	(i) => (afford(`impl:#${i.number}`) ? agent(
 		`Implement GitHub issue #${i.number} ("${i.title}") in ${args.repo}.
 
 1. Your working directory is ${i.worktree} — it and its branch ${i.slug} already
@@ -65,9 +88,9 @@ twice the same way, stop. If you cannot finish, \`gh issue edit ${i.number}
 comment why (🤖 header first), leave the worktree in place, and return pr: null.
 Handing back means the human ends up the only assignee.`,
 		{ label: `impl:#${i.number}`, phase: 'Implement', schema: PR }
-	),
+	) : null),
 
-	(r, i) => !r?.pr ? [] : parallel(REVIEWERS.map((v) => () => agent(
+	(r, i) => !r?.pr ? [] : parallel(REVIEWERS.filter((v) => afford(`${v.type}:#${i.number}`)).map((v) => () => agent(
 		`Review GitHub PR #${r.pr} in ${args.repo}. First claim your arm:
 \`gh pr edit ${r.pr} --add-label ${v.claim}${args.agentUser ? ` --add-assignee ${args.agentUser}` : ''}\` — the label
 stops a concurrent ai-loop tick spawning a duplicate of you, and the
@@ -106,4 +129,7 @@ A question only a human can answer → pass + ai-notes, never ai-changes.`,
 	)))
 )
 
-return args.issues.map((i, n) => ({ issue: i.number, ...results[n] }))
+return {
+	issues: args.issues.map((i, n) => ({ issue: i.number, ...results[n] })),
+	tokensSpent: budget.spent() - startSpent,
+}

@@ -129,7 +129,10 @@ Pass 3's Workflow and cleared by the agent; one outliving its agent is reaped in
   No repo-wide exploration, no Explore agents.
 - **2 fix rounds per PR.** On the 3rd `ai-changes`, stop and mark `ai-blocked`.
 - **8 review and fix agents per tick**, in one Workflow; the rest wait for the next tick.
-  Pass 4's pickups run in their own Workflow, bounded by `slots`.
+  Pass 4's pickups run in their own Workflow, bounded by `slots`. Both `BUDGET_TOKENS`
+  and the 8-task cap are enforced in the script itself (#41), not just here in prose —
+  a tick that would run over either skips the excess, `log()`s it, and leaves the
+  issue/PR labelled for the next tick to pick up.
 - **An idle tick spawns zero agents.** Skip to Pass 5 and say one line.
 
 ---
@@ -141,7 +144,7 @@ Pass 3's Workflow and cleared by the agent; one outliving its agent is reaped in
 From the main checkout or any worktree of it:
 
 ```bash
-eval "$(npx @rtorcato/repo-ai loop env)"   # ROOT WT_ROOT OWNER_REPO AGENT_USER HUMAN_USER ME
+eval "$(npx @rtorcato/repo-ai loop env)"   # ROOT WT_ROOT OWNER_REPO AGENT_USER HUMAN_USER ME BUDGET_TOKENS
 TICK=$(npx @rtorcato/repo-ai loop tick --json --root "$ROOT"); TICK_EXIT=$?
 printf '%s' "$TICK" | jq '{halt, idle, summary, errors}'
 ```
@@ -501,7 +504,7 @@ unclaimed for the next tick, which lists them again. A claim with no task behind
 it would sit until `loop reap` times it out.
 
 ```
-Workflow({name: 'ai-loop-pass3', args: {reviews: [{label, agentType, prompt}, …], fixes: [{label, prompt}, …]}})
+Workflow({name: 'ai-loop-pass3', args: {reviews: [{label, agentType, prompt}, …], fixes: [{label, prompt}, …], budgetTokens: BUDGET_TOKENS}})
 ```
 
 The script is `workflows/ai-loop-pass3.js` in this package, installed to
@@ -519,10 +522,14 @@ Launch it and **do not wait** — go on to Pass 4. Notes, so it doesn't get
 - **No retries, no `isolation`.** One agent per claim, so `loop reap`'s
   45-minute rule still describes every claim. Fixers work in the `ai-*`
   worktree named in their prompt, through `git -C`, never `EnterWorktree`.
-- **When the completion notification arrives**, print one line per task
+- **The script enforces its own caps (#41)** — the 8-task cap and
+  `BUDGET_TOKENS` — so a task past either never spawns; it is `log()`ged and
+  its claim label sits until the next tick adopts it, same as a dead agent.
+- **The result is `{tasks: [{label, result}, …], tokensSpent}`**, not a bare
+  array. When the completion notification arrives, print one line per task
   (`code:#58 PASS`, `fix:#61 pushed`) and act on nothing. A `null` result is an
   agent that died: its claim stays until the next tick adopts a posted verdict
-  or `loop reap` clears it.
+  or `loop reap` clears it. Fold `tokensSpent` into Pass 5's report.
 
 ### Pass 4 — pick up
 
@@ -587,7 +594,7 @@ nothing was claimed. Per issue it runs the implementer, then both reviewers the
 moment its PR opens:
 
 ```
-Workflow({name: 'ai-loop-pickup', args: {repo: OWNER_REPO, agentUser: AGENT_USER, humanUser: HUMAN_USER, namedReviewers, issues: [{number, title, slug, worktree}, …]}})
+Workflow({name: 'ai-loop-pickup', args: {repo: OWNER_REPO, agentUser: AGENT_USER, humanUser: HUMAN_USER, namedReviewers, budgetTokens: BUDGET_TOKENS, issues: [{number, title, slug, worktree}, …]}})
 ```
 
 `namedReviewers` is `true` only when **both** `code-reviewer` and
@@ -612,10 +619,16 @@ not wait** — go on to Pass 5. Notes, so it doesn't get "tidied" into breakage:
   outside Pass 3's 8-task cap; `slots` bounds them instead.
 - **An implementer that gives up** labels its issue `ai-blocked`, hands it to
   `HUMAN_USER`, comments why, and returns `pr: null` — its PR gets no review.
-- **When the completion notification arrives**, print one line per issue
+- **`BUDGET_TOKENS` is enforced in the script (#41)**, same as Pass 3: an
+  implementer or reviewer past the cap never spawns, just `log()`s a skip. A
+  skipped implementer leaves its issue `ai-wip` with no PR — `loop reap` treats
+  it like a dead agent after 45 minutes. A skipped reviewer leaves the PR
+  `ai-review`, which the next tick's Pass 3 claims normally.
+- **The result is `{issues: [{issue, …}], tokensSpent}`**, not a bare array.
+  When the completion notification arrives, print one line per issue
   (`#82 → PR #90, code PASS, sec PASS` or `#83 blocked`) and act on nothing: the
   next tick's Pass 1 hands passed PRs over, and a `loop watch` Monitor wakes that
-  tick as soon as the labels change.
+  tick as soon as the labels change. Fold `tokensSpent` into Pass 5's report.
 
 ### Pass 5 — report
 
@@ -625,6 +638,13 @@ loop is indistinguishable from a dead one. `SUMMARY` is `.summary`
 `saved` counts reviewers not spawned because a docs-only PR got one combined review), adjusted
 only where you deviated from the list; `⚠halt` on a halt. `ai-notes` never
 borrows the `⚠`.
+
+**Cost is visible, not just capped (#41).** Each Workflow's result carries
+`tokensSpent`; once a launched-but-not-yet-awaited Workflow's completion
+notification arrives (this tick or a later one), add its `tokensSpent` to a
+running per-tick total and append it to `SUMMARY` as `·NtokK` (e.g. `·210tokK`
+for 210,000). A tick with no Workflow result yet omits it — there is nothing
+to report, not zero.
 
 ```bash
 STATUS="$ROOT/.claude/ai-loop-status"   # absolute — a pinned tick's cwd is a worktree

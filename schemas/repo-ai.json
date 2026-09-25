@@ -24,6 +24,12 @@
       "minimum": 60,
       "default": 180,
       "description": "Seconds between `loop watch` polls. Each poll costs several GitHub API calls against the 5,000/h limit; values below 60 are raised to 60."
+    },
+    "budgetTokens": {
+      "type": "integer",
+      "minimum": 1000,
+      "default": 400000,
+      "description": "Output-token cap the ai-loop-pickup and ai-loop-pass3 Workflow scripts enforce per tick, on top of any interactive '+Nk' budget. Once spent, no further agent in that tick is queued — it is skipped, logged, and left for the next tick."
     }
   }
 }

@@ -85,6 +85,17 @@ describe('resolveLoopEnv', () => {
 		expect(calls.some((c) => c.join(' ').includes('assignees'))).toBe(false)
 	})
 
+	it('defaults BUDGET_TOKENS, and reads a configured cap', async () => {
+		const root = checkout(newTmpDir())
+		expect((await resolveLoopEnv({ dir: root, gh: fakeGh().gh, env: {} })).budgetTokens).toBe(
+			400_000
+		)
+		fs.writeJsonSync(join(root, '.repo-ai.json'), { budgetTokens: 50_000 })
+		expect((await resolveLoopEnv({ dir: root, gh: fakeGh().gh, env: {} })).budgetTokens).toBe(
+			50_000
+		)
+	})
+
 	it('leaves HUMAN_USER empty for an organisation repo', async () => {
 		const root = checkout(newTmpDir())
 		const env = await resolveLoopEnv({
@@ -113,10 +124,12 @@ describe('toShell', () => {
 			agentUser: '',
 			humanUser: 'h',
 			me: '$(id)',
+			budgetTokens: 400_000,
 			warnings: [],
 		})
 		expect(out).toContain(`ROOT='/a'\\''b'`)
 		expect(out).toContain(`ME='$(id)'`)
 		expect(out).toContain(`AGENT_USER=''`)
+		expect(out).toContain(`BUDGET_TOKENS='400000'`)
 	})
 })
