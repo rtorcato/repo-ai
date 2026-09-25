@@ -1,9 +1,15 @@
 import { execFileSync } from 'node:child_process'
 import { join } from 'node:path'
+import { stripVTControlCharacters } from 'node:util'
 import fs from 'fs-extra'
 import { describe, expect, it } from 'vitest'
 import type { GhExec } from '../../../src/base/gh.js'
-import { isDocsOnly, runLoopTick, staleInstall } from '../../../src/cli/commands/loop-tick.js'
+import {
+	isDocsOnly,
+	problemLines,
+	runLoopTick,
+	staleInstall,
+} from '../../../src/cli/commands/loop-tick.js'
 import {
 	readShippedSkill,
 	SHIPPED_SKILLS,
@@ -485,5 +491,14 @@ describe('staleInstall (#116)', () => {
 		expect(r).toMatchObject({ idle: true, exitCode: 0, errors: [] })
 		expect(r.staleInstall).toContain('skill ai-loop')
 		expect(r.warnings).toEqual([expect.stringContaining('fix claude-skills')])
+	})
+})
+
+describe('problemLines (#128)', () => {
+	it('prints errors and warnings on separate, prefixed lines', () => {
+		const lines = problemLines({ errors: ['gh api failed'], warnings: ['stale skill'] }).map(
+			stripVTControlCharacters
+		)
+		expect(lines).toEqual(['  error: gh api failed', '  warning: stale skill'])
 	})
 })
