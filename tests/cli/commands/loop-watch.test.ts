@@ -132,6 +132,54 @@ describe('runLoopWatch', () => {
 	})
 })
 
+describe('status file summary (#114)', () => {
+	async function watchStatus(root: string, results: LoopTickResult[]) {
+		const writes: string[] = []
+		await runLoopWatch({
+			root,
+			polls: results.length,
+			poll: async () => results.shift() as LoopTickResult,
+			sleep: async () => {},
+			write: () => {},
+			writeStatus: (file, text) => {
+				writes.push(text)
+				fs.writeFileSync(file, text)
+			},
+		})
+		return writes
+	}
+	const statusFile = (root: string) => join(root, '.claude', 'ai-loop-status')
+
+	it('rewrites line 1 only when the summary changes, keeping lines 2 and 3', async () => {
+		const root = newTmpDir()
+		fs.outputFileSync(statusFile(root), '1wip·1rev\n12 13\n1790000000\n')
+		const writes = await watchStatus(root, [tick({ summary: 'idle' }), tick({ summary: 'idle' })])
+		expect(writes).toEqual(['idle\n12 13\n1790000000\n'])
+	})
+
+	it('does not write when the summary already matches', async () => {
+		const root = newTmpDir()
+		fs.outputFileSync(statusFile(root), 'idle\n\n1790000000\n')
+		expect(await watchStatus(root, [tick({ summary: 'idle' })])).toEqual([])
+	})
+
+	it('writes ⚠halt on a halt', async () => {
+		const root = newTmpDir()
+		fs.outputFileSync(statusFile(root), 'idle\n4\n1790000000\n')
+		const writes = await watchStatus(root, [tick({ halt: 'root is bare', exitCode: 1 })])
+		expect(writes).toEqual(['⚠halt\n4\n1790000000\n'])
+	})
+
+	it('creates a missing file only when .claude/ exists', async () => {
+		const bare = newTmpDir()
+		expect(await watchStatus(bare, [tick()])).toEqual([])
+		expect(fs.existsSync(join(bare, '.claude'))).toBe(false)
+		const root = newTmpDir()
+		fs.ensureDirSync(join(root, '.claude'))
+		expect(await watchStatus(root, [tick()])).toEqual(['idle\n\n\n'])
+	})
+})
+
 describe('describeWork', () => {
 	it('lists only non-empty categories, by number', () => {
 		const w = actionable(
