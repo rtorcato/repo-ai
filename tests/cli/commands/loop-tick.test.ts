@@ -54,6 +54,8 @@ interface World {
 	failing?: number[]
 	/** PRs whose required checks are still running. */
 	pending?: number[]
+	/** PRs with no required check reported yet (`gh pr checks --required` is empty). */
+	unreported?: number[]
 	/** PR → [arm, verdict] markers posted on the current head. */
 	reviews?: Record<number, [string, string][]>
 	changes?: Record<number, number>
@@ -107,14 +109,17 @@ function fakeGh(w: World): GhExec {
 			const n = Number(args[2])
 			const failing = w.failing?.includes(n)
 			const pending = w.pending?.includes(n)
+			const unreported = w.unreported?.includes(n)
 			return {
-				ok: !failing && !pending,
+				ok: !failing && !pending && !unreported,
 				stdout: JSON.stringify(
 					failing
 						? [{ name: 'test', state: 'FAILURE', bucket: 'fail', link: 'l' }]
 						: pending
 							? [{ name: 'test', state: 'IN_PROGRESS', bucket: 'pending', link: 'l' }]
-							: []
+							: unreported
+								? []
+								: [{ name: 'verify', state: 'SUCCESS', bucket: 'pass', link: 'l' }]
 				),
 				stderr: '',
 			}
@@ -279,6 +284,27 @@ describe('runLoopTick', () => {
 		})
 		expect(r.errors).toEqual([])
 		expect(r.updateBranches).toEqual([])
+		expect(r.sendBacks).toEqual([{ pr: 11, issue: 2, reason: 'BLOCKED', failing: [] }])
+	})
+
+	it('waits on a BLOCKED PR whose required checks have not reported yet (#112)', async () => {
+		const root = checkout(newTmpDir())
+		const r = await runLoopTick({
+			root,
+			env: {},
+			now: NOW,
+			gh: fakeGh({
+				wip: [1, 2],
+				prs: [
+					pr(10, 'ai-1-unreported', ['ai-review', 'ai-ok-code', 'ai-ok-sec']),
+					pr(11, 'ai-2-all-passed', ['ai-review', 'ai-ok-code', 'ai-ok-sec']),
+				],
+				merge: { 10: 'BLOCKED', 11: 'BLOCKED' },
+				unreported: [10],
+			}),
+		})
+		expect(r.errors).toEqual([])
+		expect(r.handoffs).toEqual([])
 		expect(r.sendBacks).toEqual([{ pr: 11, issue: 2, reason: 'BLOCKED', failing: [] }])
 	})
 

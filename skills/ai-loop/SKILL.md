@@ -244,8 +244,8 @@ No label change, no comment, no agent, and it is not a fix round; the next tick
 hands the PR over once CI is green again. Only if the command fails (a conflict,
 really `DIRTY`) treat the PR as a send-back below, asking for a rebase.
 
-A passed PR that is `BLOCKED` only by required checks still running appears in
-neither list — it waits for the next tick.
+A passed PR that is `BLOCKED` only by required checks still running, or not yet
+reported at all, appears in neither list — it waits for the next tick.
 
 **Send back** — `.sendBacks[]`. `reason` is `ci-red` (a **required** check
 failed) or the state blocking a passed PR — `DIRTY` the conflict resolved,
