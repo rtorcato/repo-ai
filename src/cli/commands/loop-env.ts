@@ -1,6 +1,6 @@
 import path from 'node:path'
 import { LOGIN } from '../../base/agent-user.js'
-import { DEFAULT_BUDGET_TOKENS, readConfig } from '../../base/config.js'
+import { DEFAULT_BUDGET_TOKENS, DEFAULT_QUIET_STOP_MINUTES, readConfig } from '../../base/config.js'
 import { type GitExec, realGitExec } from '../../base/git.js'
 import { type GhExec, realGhExec } from '../../base/gh.js'
 import { configuredAgentUser, defaultWorktreeRoot } from './loop-guard.js'
@@ -29,6 +29,8 @@ export interface LoopEnv {
 	me: string
 	/** `budgetTokens`, else {@link DEFAULT_BUDGET_TOKENS} — the Workflow scripts' per-tick cap (#41). */
 	budgetTokens: number
+	/** `quietStopMinutes`, else {@link DEFAULT_QUIET_STOP_MINUTES}; `0` disables Pass 5's cutoff (#124). */
+	quietStopMinutes: number
 	warnings: string[]
 }
 
@@ -90,11 +92,21 @@ export async function resolveLoopEnv(options: LoopEnvOptions = {}): Promise<Loop
 			])
 		: ''
 	const me = await ghOut(gh, ['api', 'user', '--jq', '.login'])
-	const budgetTokens = root
-		? ((await readConfig(root)).budgetTokens ?? DEFAULT_BUDGET_TOKENS)
-		: DEFAULT_BUDGET_TOKENS
+	const config = root ? await readConfig(root) : null
+	const budgetTokens = config?.budgetTokens ?? DEFAULT_BUDGET_TOKENS
+	const quietStopMinutes = config?.quietStopMinutes ?? DEFAULT_QUIET_STOP_MINUTES
 
-	return { root, worktreeRoot, ownerRepo, agentUser, humanUser, me, budgetTokens, warnings }
+	return {
+		root,
+		worktreeRoot,
+		ownerRepo,
+		agentUser,
+		humanUser,
+		me,
+		budgetTokens,
+		quietStopMinutes,
+		warnings,
+	}
 }
 
 const VARS: [string, keyof Omit<LoopEnv, 'warnings'>][] = [
@@ -105,6 +117,7 @@ const VARS: [string, keyof Omit<LoopEnv, 'warnings'>][] = [
 	['HUMAN_USER', 'humanUser'],
 	['ME', 'me'],
 	['BUDGET_TOKENS', 'budgetTokens'],
+	['QUIET_STOP_MINUTES', 'quietStopMinutes'],
 ]
 
 /** `KEY='value'` lines, single-quoted so `eval "$(… loop env)"` is safe. */

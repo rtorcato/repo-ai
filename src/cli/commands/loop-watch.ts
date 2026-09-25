@@ -98,16 +98,20 @@ export function describeWork(summary: string, w: Work, now: Date): string {
 }
 
 const clock = (now: Date) => now.toTimeString().slice(0, 5)
+const epoch = (now: Date) => Math.floor(now.getTime() / 1000)
 
 /**
  * Replace line 1 of the status file with `summary`, keeping lines 2–3 (the
- * `ai-suggested` numbers and next-tick epoch). No-op when line 1 already
- * matches, or when `.claude/` doesn't exist — it is never created.
+ * `ai-suggested` numbers and next-tick epoch) and stamping line 4 with `nowSec`,
+ * the epoch the summary last changed (#124) — Pass 5 stops the loop once it is
+ * `quietStopMinutes` old. No-op when line 1 already matches, or when `.claude/`
+ * doesn't exist — it is never created.
  */
 export function updateStatusSummary(
 	root: string,
 	summary: string,
-	writeStatus: (file: string, text: string) => void
+	writeStatus: (file: string, text: string) => void,
+	nowSec: number
 ): void {
 	const dir = path.join(root, '.claude')
 	const file = path.join(dir, 'ai-loop-status')
@@ -121,13 +125,12 @@ export function updateStatusSummary(
 			return
 		}
 		if (!fs.existsSync(dir)) return
-		text = '\n\n\n'
+		text = ''
 	}
-	const lines = text.split('\n')
-	if (lines[0] === summary) return
-	lines[0] = summary
+	const [prev, suggested = '', next = ''] = text.split('\n')
+	if (prev === summary) return
 	try {
-		writeStatus(file, lines.join('\n'))
+		writeStatus(file, `${summary}\n${suggested}\n${next}\n${nowSec}\n`)
 	} catch (err) {
 		console.error(chalk.yellow(`status write failed: ${(err as Error).message}`))
 	}
@@ -180,7 +183,7 @@ export async function runLoopWatch(options: LoopWatchOptions = {}): Promise<void
 						: `${clock(now())}  ⚠halt: ${r.halt}`
 				)
 			lastHalt = r.halt
-			updateStatusSummary(root, '⚠halt', writeStatus)
+			updateStatusSummary(root, '⚠halt', writeStatus, epoch(now()))
 			continue
 		}
 		lastHalt = null
@@ -188,7 +191,7 @@ export async function runLoopWatch(options: LoopWatchOptions = {}): Promise<void
 		// Partial lists would read as a change, so keep the last good baseline —
 		// unless this poll removed worktrees, which no later poll reports again.
 		if (r.errors.length > 0 && r.cleaned.length === 0) continue
-		if (r.errors.length === 0) updateStatusSummary(root, r.summary, writeStatus)
+		if (r.errors.length === 0) updateStatusSummary(root, r.summary, writeStatus, epoch(now()))
 		const work = actionable(r)
 		const print = JSON.stringify(work)
 		// Work draining away is not news; the next tick finds it gone anyway.
