@@ -16,16 +16,17 @@ import { type GitExec, isNewerVersion, resolveShippedVersion } from '../utils/ve
 
 /**
  * Skills this package owns the content of and keeps up to date. The loop first —
- * it is the pipeline; the others are its on-ramp, status view and one-shot tick.
+ * it is the pipeline; the others are its on-ramp and status view.
  */
-export const SHIPPED_SKILLS = ['ai-loop', 'ai-issue', 'ai-loop-status', 'ai-tick']
+export const SHIPPED_SKILLS = ['ai-loop', 'ai-issue', 'ai-loop-status']
 
 /**
  * Skills earlier releases shipped: `ai-issue-loop` became `ai-loop` (#56), and
- * `ai-workflow` was folded into it (#87). A stale copy would still answer its
- * old slash command, so `fix claude-skills` removes one it can prove is ours.
+ * `ai-workflow` (#87) and `ai-tick` (#89) were folded into it. A stale copy
+ * would still answer its old slash command, so `fix claude-skills` removes one
+ * it can prove is ours.
  */
-export const RETIRED_SKILLS = ['ai-issue-loop', 'ai-workflow']
+export const RETIRED_SKILLS = ['ai-issue-loop', 'ai-workflow', 'ai-tick']
 
 /** The primary skill — the default everywhere a single name is accepted. */
 export const SHIPPED_SKILL = 'ai-loop'

@@ -109,7 +109,7 @@ const EXAMPLES: { label: string; file: string; code: string }[] = [
 		code: `/ai-issue "Add --json to the reap command"   # file an ai-ready issue
 /loop /ai-loop                              # work the queue, then babysit the PRs
 /ai-loop-status                             # read-only: what is the loop doing?
-/ai-tick                                    # run one tick now`,
+/ai-loop                                    # run one tick now`,
 	},
 	{
 		label: 'audit',
@@ -137,7 +137,7 @@ const PARTS: { name: string; desc: string; chips: string[]; href: string }[] = [
 	{
 		name: 'Claude Code skills',
 		desc: 'The loop, the issue on-ramp, and a read-only status view — installed into ~/.claude/skills.',
-		chips: ['ai-loop', 'ai-issue', 'ai-loop-status', 'ai-tick'],
+		chips: ['ai-loop', 'ai-issue', 'ai-loop-status'],
 		href: '/docs/commands',
 	},
 	{

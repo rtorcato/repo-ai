@@ -8,7 +8,7 @@ description: |
   merged worktrees, reap stalled agents, and implement the `ai-ready` queue in
   parallel worktrees, each PR reviewed by two agents. Use when the user says
   "run the AI pipeline", "work the ai-ready issues", "burst the queue", "babysit
-  the AI PRs", or invokes `/ai-loop`. It never merges; Dependabot PRs are handled
+  the AI PRs", "tick now", "run a tick", or invokes `/ai-loop`. It never merges; Dependabot PRs are handled
   by their own workflow, outside this loop.
   GitHub only (`gh`) — not GitLab.
 ---
@@ -653,7 +653,7 @@ sessions too:
 | Self-paced `/loop /ai-loop` (no interval) | `1800` when `SUMMARY` is `idle` — a new `ai-ready` issue can wait half an hour — else `600`: agents in flight, reviews pending, or a PR waiting |
 | Self-paced, with a `loop watch` Monitor running | `1800` always — the watcher wakes the session on change; this wakeup is only the fallback |
 | Fixed `/loop <interval> /ai-loop` | that interval, in seconds; `/loop` schedules it |
-| A plain `/ai-loop` | empty — nothing is scheduled |
+| A plain `/ai-loop` — a tick run by hand, even inside a session a `/loop` is driving | empty — **never call `ScheduleWakeup`**; a running loop keeps its own wakeup, and a second would double every tick after this |
 
 Write the status file **last** — `SUMMARY`, `SUGGESTED`, and when the next tick
 is due (empty when none). Its age is the liveness signal: ticks run at most 30
@@ -663,6 +663,9 @@ statusline say `next 9m` or `manual` instead of leaving you to guess:
 
 ```bash
 NEXT=${DELAY:+$(( $(date +%s) + DELAY ))}
+# A hand-run tick keeps a still-pending wakeup, so the statusline says `next 9m`, not `manual`.
+PREV_NEXT=$(sed -n 3p "$STATUS" 2>/dev/null)
+[ -z "$NEXT" ] && [ "${PREV_NEXT:-0}" -gt "$(date +%s)" ] 2>/dev/null && NEXT=$PREV_NEXT
 printf '%s\n%s\n%s\n' "$SUMMARY" "$SUGGESTED" "$NEXT" > "$STATUS"
 ```
 
@@ -670,7 +673,8 @@ Print `SUMMARY` plus at most five lines — handed over, cleaned up, sent to
 review, picked up, blocked — marking handoffs carrying `ai-notes`, and any
 `.errors`. Then print `$DIGEST`, unless `$SUGGESTED` is empty or equals
 `$PREV_SUGGESTED`. **End with exactly one line saying what happens next:**
-`Next tick: in 10m (self-paced)`, `Next tick: in 15m (/loop)`, or
+`Next tick: in 10m (self-paced)`, `Next tick: in 15m (/loop)`,
+`Next tick: in 9m (already scheduled)` for a hand-run tick that kept one, or
 `Next tick: none scheduled — run /ai-loop, or /loop /ai-loop to keep it going`.
 
 **Then, only under a self-paced `/loop`, schedule it** — `ScheduleWakeup` with
@@ -699,7 +703,7 @@ nothing itself.
 **Is a tick coming?** Every tick ends with a `Next tick:` line, and the statusline
 segment (`repo-ai fix statusline`) shows it: `🤖 1wip · next 9m` while the loop
 is running, `🤖 1wip · manual` when nothing is scheduled, and nothing at all
-once the last tick is over 35 minutes old. `/ai-tick` runs one tick now and
+once the last tick is over 35 minutes old. A plain `/ai-loop` runs one tick now and
 schedules nothing, so a running loop keeps its own wakeup.
 
 **Wake on change, not on a timer.** A tick is a full LLM turn; a poll needs no
