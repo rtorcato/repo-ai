@@ -1,8 +1,11 @@
 import path from 'node:path'
 import chalk from 'chalk'
+import fs from 'fs-extra'
 import { type GitExec, realGitExec } from '../../base/git.js'
 import { type GhExec, realGhExec } from '../../base/gh.js'
 import { releaseGated } from '../../base/release-gate.js'
+import { claudeSkillStatus, SHIPPED_SKILLS } from '../generators/claude-skills.js'
+import { installWorkflow, SHIPPED_WORKFLOWS, workflowsDirFor } from '../generators/workflows.js'
 import { type CleanupEntry, runLoopCleanup } from './loop-cleanup.js'
 import { type LoopEnv, resolveLoopEnv } from './loop-env.js'
 import { type InstallExec, type RebuildOutcome, runLoopGuard } from './loop-guard.js'
@@ -104,6 +107,10 @@ export interface LoopTickResult {
 	rebuild: RebuildOutcome
 	summary: string
 	errors: string[]
+	/** Shipped skills/workflows whose installed copy is behind the package's (#116). */
+	staleInstall: string[]
+	/** Worth saying, never a reason to leave idle or halt. */
+	warnings: string[]
 	exitCode: 0 | 1 | 2
 }
 
@@ -189,6 +196,8 @@ function empty(env: LoopEnv): LoopTickResult {
 		rebuild: 'not-requested',
 		summary: '',
 		errors: [],
+		staleInstall: [],
+		warnings: [],
 		exitCode: 0,
 	}
 }
@@ -203,6 +212,11 @@ export async function runLoopTick(options: LoopTickOptions = {}): Promise<LoopTi
 		return result
 	}
 	const { root, ownerRepo } = env
+	result.staleInstall = await staleInstall(options.env ?? process.env)
+	if (result.staleInstall.length > 0)
+		result.warnings.push(
+			`installed copies behind this package: ${result.staleInstall.join(', ')} — run \`npx @rtorcato/repo-ai fix claude-skills\``
+		)
 	const git: GitExec = options.git ?? ((args) => realGitExec(args, root, 120_000))
 	const gh: GhExec = options.gh ?? ((args, stdin) => realGhExec(args, stdin, root))
 	const now = (options.now ?? new Date()).getTime()
@@ -506,6 +520,28 @@ export async function runLoopTick(options: LoopTickOptions = {}): Promise<LoopTi
 	return result
 }
 
+/**
+ * Ticks follow the installed `~/.claude` copies, not the package's, so name any
+ * that `fix claude-skills` would refresh. Read-only; a fork, a missing copy or
+ * no `~/.claude/skills` at all is not stale. `env` is the HOME seam.
+ */
+export async function staleInstall(env: NodeJS.ProcessEnv): Promise<string[]> {
+	const home = env.HOME ?? env.USERPROFILE
+	if (!home) return []
+	const skillsDir = path.join(home, '.claude', 'skills')
+	if (!(await fs.pathExists(skillsDir))) return []
+	const stale: string[] = []
+	for (const name of SHIPPED_SKILLS) {
+		const s = await claudeSkillStatus(name, skillsDir)
+		if (s.installed && s.needsInstall) stale.push(`skill ${name}`)
+	}
+	for (const name of SHIPPED_WORKFLOWS) {
+		const w = await installWorkflow(workflowsDirFor(skillsDir), name, { dryRun: true })
+		if (w.status === 'updated') stale.push(`workflow ${name}`)
+	}
+	return stale
+}
+
 /** `⚠` segments first, so a truncated phone banner still leads with the stall. */
 export function summarize(r: LoopTickResult, inFlight: number, loopPrs: number): string {
 	if (r.idle) return 'idle'
@@ -543,7 +579,7 @@ export async function loopTickCommand(options: { root?: string; json?: boolean }
 		console.error(chalk.red(`✖ halt: ${result.halt}`))
 	} else {
 		console.log(result.summary)
-		for (const e of result.errors) console.log(`  ${chalk.yellow(e)}`)
+		for (const e of [...result.errors, ...result.warnings]) console.log(`  ${chalk.yellow(e)}`)
 	}
 	process.exitCode = result.exitCode
 }

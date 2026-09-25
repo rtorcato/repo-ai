@@ -3,7 +3,17 @@ import { join } from 'node:path'
 import fs from 'fs-extra'
 import { describe, expect, it } from 'vitest'
 import type { GhExec } from '../../../src/base/gh.js'
-import { isDocsOnly, runLoopTick } from '../../../src/cli/commands/loop-tick.js'
+import { isDocsOnly, runLoopTick, staleInstall } from '../../../src/cli/commands/loop-tick.js'
+import {
+	readShippedSkill,
+	SHIPPED_SKILLS,
+	stampSkill,
+} from '../../../src/cli/generators/claude-skills.js'
+import {
+	readShippedWorkflow,
+	SHIPPED_WORKFLOWS,
+	stampWorkflow,
+} from '../../../src/cli/generators/workflows.js'
 import { useTmpDir } from '../../helpers/tmp-dir.js'
 
 const newTmpDir = useTmpDir()
@@ -380,5 +390,57 @@ describe('isDocsOnly', () => {
 		])
 			expect(isDocsOnly([f])).toBe(true)
 		expect(isDocsOnly([])).toBe(false)
+	})
+})
+
+describe('staleInstall (#116)', () => {
+	/** A HOME whose ~/.claude holds every shipped skill and workflow stamped at `version`. */
+	async function home(version?: string): Promise<string> {
+		const dir = newTmpDir()
+		for (const name of SHIPPED_SKILLS) {
+			const s = await readShippedSkill(name)
+			await fs.outputFile(
+				join(dir, '.claude', 'skills', name, 'SKILL.md'),
+				stampSkill(s.content, version ?? s.version)
+			)
+		}
+		for (const name of SHIPPED_WORKFLOWS) {
+			const w = await readShippedWorkflow(name)
+			await fs.outputFile(
+				join(dir, '.claude', 'workflows', `${name}.js`),
+				stampWorkflow(w.content, version ?? w.version)
+			)
+		}
+		return dir
+	}
+
+	it('names every copy behind the package', async () => {
+		const stale = await staleInstall({ HOME: await home('0.0.1') })
+		expect(stale).toEqual([
+			...SHIPPED_SKILLS.map((n) => `skill ${n}`),
+			...SHIPPED_WORKFLOWS.map((n) => `workflow ${n}`),
+		])
+	})
+
+	it('is empty when the installed copies are current', async () => {
+		expect(await staleInstall({ HOME: await home() })).toEqual([])
+	})
+
+	it('is empty with no ~/.claude/skills, or no HOME', async () => {
+		expect(await staleInstall({ HOME: newTmpDir() })).toEqual([])
+		expect(await staleInstall({})).toEqual([])
+	})
+
+	it('warns from the tick without leaving idle', async () => {
+		const root = checkout(newTmpDir())
+		const r = await runLoopTick({
+			root,
+			gh: fakeGh({}),
+			env: { HOME: await home('0.0.1') },
+			now: NOW,
+		})
+		expect(r).toMatchObject({ idle: true, exitCode: 0, errors: [] })
+		expect(r.staleInstall).toContain('skill ai-loop')
+		expect(r.warnings).toEqual([expect.stringContaining('fix claude-skills')])
 	})
 })

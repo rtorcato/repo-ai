@@ -146,7 +146,7 @@ From the main checkout or any worktree of it:
 ```bash
 eval "$(npx @rtorcato/repo-ai loop env)"   # ROOT WT_ROOT OWNER_REPO AGENT_USER HUMAN_USER ME BUDGET_TOKENS
 TICK=$(npx @rtorcato/repo-ai loop tick --json --root "$ROOT"); TICK_EXIT=$?
-printf '%s' "$TICK" | jq '{halt, idle, summary, errors}'
+printf '%s' "$TICK" | jq '{halt, idle, summary, errors, warnings}'
 ```
 
 **A non-zero `TICK_EXIT` halts the whole tick, not the command.** `loop tick`
@@ -722,7 +722,8 @@ printf '%s\n%s\n%s\n' "$SUMMARY" "$SUGGESTED" "$NEXT" > "$STATUS"
 
 Print `SUMMARY` plus at most five lines — handed over, cleaned up, sent to
 review, picked up, blocked — marking handoffs carrying `ai-notes`, and any
-`.errors`. Then print `$DIGEST`, unless `$SUGGESTED` is empty or equals
+`.errors` and `.warnings` (a stale installed skill or workflow names `fix
+claude-skills` — say it, never run it). Then print `$DIGEST`, unless `$SUGGESTED` is empty or equals
 `$PREV_SUGGESTED`. **End with exactly one line saying what happens next:**
 `Next tick: every 10m — say "stop the loop" to end it` (or `every 30m`). On a
 halt, name the fix instead: `Next tick: none — relaunch as <agentUser>, then
