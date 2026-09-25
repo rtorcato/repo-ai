@@ -3,7 +3,7 @@
 # Installed to ~/.claude/ai-loop-statusline.sh by `repo-ai fix statusline`;
 # edits there are overwritten on the next run of that fixer.
 #
-# Prints "🤖 <summary> · next 9m" (or "· manual") — from <repo>/.claude/ai-loop-status, written by
+# Prints "🤖 <summary> · next 9m" — from <repo>/.claude/ai-loop-status, written by
 # the ai-loop skill's Pass 5 at the end of every tick — or nothing when
 # there is no status or it is stale.
 #
@@ -37,11 +37,13 @@ mtime=$(stat -c %Y "$file" 2>/dev/null || stat -f %m "$file" 2>/dev/null) || exi
 now=$(date +%s)
 [ $((now - mtime)) -lt "$STALE_AFTER" ] || exit 0
 
-# Line 3 is when the next tick is due (epoch seconds), empty when none is
-# scheduled — so the segment answers "is anything coming?", not just "what state".
+# Line 3 is when the next tick is due (epoch seconds) — so the segment answers
+# "is anything coming?", not just "what state". Every tick writes it; a status
+# file from before that gets the summary alone.
 next=$(sed -n 3p "$file")
+when=
 case $next in
-'' | *[!0-9]*) when='manual' ;;
+'' | *[!0-9]*) ;;
 *)
 	left=$(((next - now + 59) / 60))
 	# Overdue but not stale: ticks only fire while the Claude REPL is idle.
@@ -49,4 +51,4 @@ case $next in
 	;;
 esac
 
-printf '🤖 %s · %s' "$(head -1 "$file")" "$when"
+printf '🤖 %s%s' "$(head -1 "$file")" "${when:+ · $when}"
