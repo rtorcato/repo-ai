@@ -235,6 +235,32 @@ describe('runLoopTick', () => {
 		expect(r.summary).toBe('⚠1blocked·⚠1ci-red·4wip·6rev·1ready')
 	})
 
+	it('picks up bug issues first, keeping queue order within each group (#108)', async () => {
+		const root = checkout(newTmpDir())
+		const issue = (number: number, labels: string[] = []) => ({
+			number,
+			title: `#${number}`,
+			body: '',
+			labels: labels.map((name) => ({ name })),
+			author_association: 'OWNER',
+		})
+		const r = await runLoopTick({
+			root,
+			env: {},
+			now: NOW,
+			gh: fakeGh({
+				queue: [
+					issue(50, ['enhancement']),
+					issue(51, ['bug']),
+					issue(52),
+					issue(53, ['bug', 'docs']),
+					issue(54, ['bug', 'holding']),
+				],
+			}),
+		})
+		expect(r.pickups.map((p) => p.number)).toEqual([51, 53, 50, 52])
+	})
+
 	it('waits on a BLOCKED PR whose required checks are still pending', async () => {
 		const root = checkout(newTmpDir())
 		const r = await runLoopTick({

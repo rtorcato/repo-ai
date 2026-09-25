@@ -465,11 +465,14 @@ export async function runLoopTick(options: LoopTickOptions = {}): Promise<LoopTi
 		'api',
 		`repos/${ownerRepo}/issues?labels=ai-ready&state=open&per_page=100`,
 	])
+	const isBug = (i: RestIssue) => i.labels.some((l) => l.name === 'bug')
 	result.pickups = (queue ?? [])
 		.filter((i) => !i.pull_request)
 		.filter((i) => !i.labels.some((l) => ['ai-wip', 'ai-blocked', 'holding'].includes(l.name)))
 		// The label is the hard gate; association is the backstop.
 		.filter((i) => TRUSTED.has(i.author_association))
+		// Bugs first; sort is stable, so the API's order holds within each group (#108).
+		.sort((a, b) => Number(isBug(b)) - Number(isBug(a)))
 		.map(({ number, title, body }) => ({ number, title, body: body ?? '' }))
 
 	// Slots count what is still in flight once this tick's cleanup and reaping land.
