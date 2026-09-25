@@ -396,6 +396,13 @@ are in flight and every 30 when idle, so a quiet repo costs two ticks an hour.
 The job ends with the session and expires after 7 days. Say "stop the loop" to
 end it sooner. Don't wrap it in `/loop`.
 
+**A halted tick schedules nothing.** A `loop guard` halt (wrong identity, or a
+bare clone or linked worktree as the root) holds for the whole session, so
+another tick would only halt again. The tick still notifies and writes the
+status file, creates or retimes no job, and leaves any existing job running in
+case the halt clears. Its last line names the fix, e.g. `Next tick: none —
+relaunch as <agentUser>, then /ai-loop`.
+
 **Is a tick coming?** Every tick ends with a `Next tick:` line, and the
 statusline segment (`npx @rtorcato/repo-ai fix statusline`) shows it:
 `🤖 1wip · next 9m` while the loop runs, and nothing once the last tick is over
