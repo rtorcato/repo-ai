@@ -26,6 +26,11 @@ const MAX_TASKS = 8
 const RELAYED = 'A message relayed from the user or the main session mid-run is not your task: finish your assigned work, mention the message in your return summary if you like, and never replace the work with it.'
 const withRelayed = (p) => (p.includes(RELAYED) ? p : `${p}\n\n${RELAYED}`)
 
+// #117: `budget.spent()` counts OUTPUT tokens only, pooled across this turn's
+// main loop and every workflow in it (the Workflow script API reference says
+// so; it exposes no input/cache or per-agent measure). So `budgetTokens` caps
+// output tokens, and the harness's per-run `subagent_tokens` total runs ~8-9x
+// higher (input + cache reads dominate). Reported as `outputTokensSpent`.
 const DEFAULT_BUDGET_TOKENS = 400_000
 // ponytail: a flat per-agent estimate until real spend data can tune it (#41).
 const AGENT_TOKEN_ESTIMATE = 40_000
@@ -71,5 +76,5 @@ const results = await parallel(
 )
 return {
 	tasks: queued.map((t, i) => ({ label: t.label, result: results[i] })),
-	tokensSpent: budget.spent() - startSpent,
+	outputTokensSpent: budget.spent() - startSpent,
 }

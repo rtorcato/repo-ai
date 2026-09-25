@@ -131,7 +131,7 @@ describe('ai-loop-pass3', () => {
 				{ label: 'code:#58', result: { verdict: 'PASS' } },
 				{ label: 'both:#59', result: { verdict: 'PASS' } },
 			],
-			tokensSpent: 0,
+			outputTokensSpent: 0,
 		})
 	})
 
@@ -206,7 +206,7 @@ describe('ai-loop-pickup', () => {
 		])
 		expect(value).toEqual({
 			issues: [{ issue: 1, 0: { passed: true }, 1: { passed: true } }, { issue: 2 }],
-			tokensSpent: 0,
+			outputTokensSpent: 0,
 		})
 	})
 
