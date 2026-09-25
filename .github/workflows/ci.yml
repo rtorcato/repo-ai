@@ -18,7 +18,10 @@ concurrency:
   # Never cancel a push-triggered run on main: it may be halfway through
   # publishing. A manual dispatch, though, is usually a re-run to get past a
   # stale approval wait — let a newer dispatch supersede one still queued.
-  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
+  # Pull-request runs aren't cancelled either: a cancelled run's test legs end
+  # `cancelled`, its `verify` (always()) then fails, and that blocks the PR even
+  # when a second run on the same SHA passed. A superseded run just finishes.
+  cancel-in-progress: ${{ github.event_name == 'workflow_dispatch' }}
 
 permissions:
   contents: read
