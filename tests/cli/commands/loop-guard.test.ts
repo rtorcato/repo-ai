@@ -172,6 +172,9 @@ describe('runLoopGuard — node_modules rebuild gating', () => {
 	const pnpmRepo = (): string => {
 		const root = healthyCheckout(newTmpDir())
 		fs.writeFileSync(join(root, 'pnpm-lock.yaml'), "lockfileVersion: '9.0'\n")
+		fs.outputJsonSync(join(root, '.claude', 'settings.json'), {
+			worktree: { symlinkDirectories: ['node_modules'] },
+		})
 		return root
 	}
 
@@ -199,6 +202,9 @@ describe('runLoopGuard — node_modules rebuild gating', () => {
 		const parent = newTmpDir()
 		const root = healthyCheckout(parent)
 		fs.writeFileSync(join(root, 'pnpm-lock.yaml'), "lockfileVersion: '9.0'\n")
+		fs.outputJsonSync(join(root, '.claude', 'settings.json'), {
+			worktree: { symlinkDirectories: ['node_modules'] },
+		})
 		fs.ensureDirSync(join(parent, 'repo-worktrees', 'ai-42-live'))
 		const result = await runLoopGuard({ root, removed: true, install: neverInstalls })
 		expect(result.rebuild).toBe('deferred')
@@ -217,6 +223,9 @@ describe('runLoopGuard — node_modules rebuild gating', () => {
 		const parent = newTmpDir()
 		const root = healthyCheckout(parent)
 		fs.writeFileSync(join(root, 'pnpm-lock.yaml'), "lockfileVersion: '9.0'\n")
+		fs.outputJsonSync(join(root, '.claude', 'settings.json'), {
+			worktree: { symlinkDirectories: ['node_modules'] },
+		})
 		fs.ensureDirSync(join(parent, 'repo-worktrees', 'scratch'))
 		const result = await runLoopGuard({ root, removed: true, install: async () => true })
 		expect(result.live).toEqual([])
@@ -248,6 +257,18 @@ describe('runLoopGuard — node_modules rebuild gating', () => {
 		const result = await runLoopGuard({ root, removed: true, install: neverInstalls })
 		expect(result.rebuild).toBe('skipped-root-unusable')
 		expect(result.exitCode).toBe(2)
+	})
+
+	it('skips, never defers, when no worktree links the main checkout (#103)', async () => {
+		const parent = newTmpDir()
+		const root = healthyCheckout(parent)
+		fs.writeFileSync(join(root, 'pnpm-lock.yaml'), "lockfileVersion: '9.0'\n")
+		fs.ensureDirSync(join(parent, 'repo-worktrees', 'ai-42-live'))
+		const result = await runLoopGuard({ root, removed: true, install: neverInstalls })
+		expect(result.rebuild).toBe('skipped-not-linked')
+		expect(await decideRebuild({ root, removed: true, exitCode: 0, live: [] })).toBe(
+			'skipped-not-linked'
+		)
 	})
 
 	it('keeps both pnpm flags — neither is optional', () => {
