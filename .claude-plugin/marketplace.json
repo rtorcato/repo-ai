@@ -1,0 +1,15 @@
+{
+  "name": "repo-ai",
+  "description": "The ai-loop pipeline split out of @rtorcato/repo-tooling: skills that take an ai-ready GitHub issue to a reviewed PR.",
+  "owner": {
+    "name": "Richard Torcato",
+    "url": "https://github.com/rtorcato"
+  },
+  "plugins": [
+    {
+      "name": "repo-ai",
+      "source": "./",
+      "description": "Three skills: ai-loop (the entry point and engine), ai-issue (the on-ramp) and ai-loop-status (a read-only view). They call the @rtorcato/repo-ai CLI via npx. Unversioned: tracks main."
+    }
+  ]
+}
