@@ -1,3 +1,4 @@
+import fs from 'node:fs'
 import path from 'node:path'
 import { setTimeout as delay } from 'node:timers/promises'
 import chalk from 'chalk'
@@ -22,6 +23,10 @@ import { type LoopTickResult, runLoopTick } from './loop-tick.js'
  * Watching writes nothing to GitHub, so an `agentUser` mismatch warns once on
  * stderr instead of halting (#82); `loop tick` itself still halts on it.
  *
+ * It also keeps line 1 of `$ROOT/.claude/ai-loop-status` (the statusline's
+ * summary) current between ticks (#114), writing only when it changes so the
+ * file's age stays the loop's liveness signal.
+ *
  * Runs until killed. A halt prints once, until it clears. A poll with `errors`
  * or one that throws is skipped: a transient `gh` failure must neither kill the
  * watcher nor wake the session.
@@ -36,6 +41,8 @@ export interface LoopWatchOptions {
 	now?: () => Date
 	sleep?: (ms: number) => Promise<void>
 	write?: (line: string) => void
+	/** Writes the status file; only called when its line 1 changes. */
+	writeStatus?: (file: string, text: string) => void
 	/** Stop after this many polls; unset runs forever. */
 	polls?: number
 }
@@ -93,6 +100,35 @@ export function describeWork(summary: string, w: Work, now: Date): string {
 const clock = (now: Date) => now.toTimeString().slice(0, 5)
 
 /**
+ * Replace line 1 of the status file with `summary`, keeping lines 2–3 (the
+ * `ai-suggested` numbers and next-tick epoch). No-op when line 1 already
+ * matches, or when `.claude/` doesn't exist — it is never created.
+ */
+export function updateStatusSummary(
+	root: string,
+	summary: string,
+	writeStatus: (file: string, text: string) => void
+): void {
+	const dir = path.join(root, '.claude')
+	const file = path.join(dir, 'ai-loop-status')
+	let text: string
+	try {
+		text = fs.readFileSync(file, 'utf8')
+	} catch {
+		if (!fs.existsSync(dir)) return
+		text = '\n\n\n'
+	}
+	const lines = text.split('\n')
+	if (lines[0] === summary) return
+	lines[0] = summary
+	try {
+		writeStatus(file, lines.join('\n'))
+	} catch (err) {
+		console.error(chalk.yellow(`status write failed: ${(err as Error).message}`))
+	}
+}
+
+/**
  * The `gh` a watch's ticks run with. On an `agentUser` mismatch it warns once
  * and answers the login probe with `agentUser`, so the guard passes and the work
  * list is the one the agent's own tick would act on. Every other call is real.
@@ -116,6 +152,7 @@ export async function runLoopWatch(options: LoopWatchOptions = {}): Promise<void
 	const now = options.now ?? (() => new Date())
 	const sleep = options.sleep ?? ((ms: number) => delay(ms))
 	const write = options.write ?? ((line: string) => console.log(line))
+	const writeStatus = options.writeStatus ?? ((file, text) => fs.writeFileSync(file, text))
 	const seconds = (await readConfig(root)).pollSeconds ?? DEFAULT_POLL_SECONDS
 	const gh = await watchGh(root, options.gh ?? ((args, stdin) => realGhExec(args, stdin, root)))
 
@@ -138,6 +175,7 @@ export async function runLoopWatch(options: LoopWatchOptions = {}): Promise<void
 						: `${clock(now())}  ⚠halt: ${r.halt}`
 				)
 			lastHalt = r.halt
+			updateStatusSummary(root, '⚠halt', writeStatus)
 			continue
 		}
 		lastHalt = null
@@ -145,6 +183,7 @@ export async function runLoopWatch(options: LoopWatchOptions = {}): Promise<void
 		// Partial lists would read as a change, so keep the last good baseline —
 		// unless this poll removed worktrees, which no later poll reports again.
 		if (r.errors.length > 0 && r.cleaned.length === 0) continue
+		if (r.errors.length === 0) updateStatusSummary(root, r.summary, writeStatus)
 		const work = actionable(r)
 		const print = JSON.stringify(work)
 		// Work draining away is not news; the next tick finds it gone anyway.
