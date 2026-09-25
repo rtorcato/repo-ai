@@ -36,6 +36,14 @@ describe('readConfig', () => {
 		expect((await readConfig(dir)).budgetTokens).toBeUndefined()
 	})
 
+	it('reads quietStopMinutes, keeping 0 and ignoring a negative value', async () => {
+		const dir = newTmpDir()
+		fs.outputJsonSync(join(dir, '.repo-ai.json'), { quietStopMinutes: 0 })
+		expect((await readConfig(dir)).quietStopMinutes).toBe(0)
+		fs.outputJsonSync(join(dir, '.repo-ai.json'), { quietStopMinutes: -5 })
+		expect((await readConfig(dir)).quietStopMinutes).toBeUndefined()
+	})
+
 	it('falls back to .repo-tooling.json rules.aiLoop / rules.requiredSkills', async () => {
 		const dir = newTmpDir()
 		fs.outputJsonSync(join(dir, '.repo-tooling.json'), {

@@ -141,6 +141,7 @@ describe('status file summary (#114)', () => {
 			poll: async () => results.shift() as LoopTickResult,
 			sleep: async () => {},
 			write: () => {},
+			now: () => new Date(NOW * 1000),
 			writeStatus: (file, text) => {
 				writes.push(text)
 				fs.writeFileSync(file, text)
@@ -149,25 +150,27 @@ describe('status file summary (#114)', () => {
 		return writes
 	}
 	const statusFile = (root: string) => join(root, '.claude', 'ai-loop-status')
+	const NOW = 1790000500
 
-	it('rewrites line 1 only when the summary changes, keeping lines 2 and 3', async () => {
+	it('rewrites line 1 only when the summary changes, keeping lines 2 and 3 and stamping line 4', async () => {
 		const root = newTmpDir()
-		fs.outputFileSync(statusFile(root), '1wip·1rev\n12 13\n1790000000\n')
+		fs.outputFileSync(statusFile(root), '1wip·1rev\n12 13\n1790000000\n1789990000\n')
 		const writes = await watchStatus(root, [tick({ summary: 'idle' }), tick({ summary: 'idle' })])
-		expect(writes).toEqual(['idle\n12 13\n1790000000\n'])
+		expect(writes).toEqual([`idle\n12 13\n1790000000\n${NOW}\n`])
 	})
 
-	it('does not write when the summary already matches', async () => {
+	it('does not write, so keeps line 4, when the summary already matches', async () => {
 		const root = newTmpDir()
-		fs.outputFileSync(statusFile(root), 'idle\n\n1790000000\n')
+		fs.outputFileSync(statusFile(root), 'idle\n\n1790000000\n1789990000\n')
 		expect(await watchStatus(root, [tick({ summary: 'idle' })])).toEqual([])
+		expect(fs.readFileSync(statusFile(root), 'utf8').split('\n')[3]).toBe('1789990000')
 	})
 
 	it('writes ⚠halt on a halt', async () => {
 		const root = newTmpDir()
 		fs.outputFileSync(statusFile(root), 'idle\n4\n1790000000\n')
 		const writes = await watchStatus(root, [tick({ halt: 'root is bare', exitCode: 1 })])
-		expect(writes).toEqual(['⚠halt\n4\n1790000000\n'])
+		expect(writes).toEqual([`⚠halt\n4\n1790000000\n${NOW}\n`])
 	})
 
 	it('creates a missing file only when .claude/ exists', async () => {
@@ -176,7 +179,7 @@ describe('status file summary (#114)', () => {
 		expect(fs.existsSync(join(bare, '.claude'))).toBe(false)
 		const root = newTmpDir()
 		fs.ensureDirSync(join(root, '.claude'))
-		expect(await watchStatus(root, [tick()])).toEqual(['idle\n\n\n'])
+		expect(await watchStatus(root, [tick()])).toEqual([`idle\n\n\n${NOW}\n`])
 	})
 
 	it('does not write when the read fails for a reason other than ENOENT', async () => {

@@ -144,7 +144,7 @@ Pass 3's Workflow and cleared by the agent; one outliving its agent is reaped in
 From the main checkout or any worktree of it:
 
 ```bash
-eval "$(npx @rtorcato/repo-ai loop env)"   # ROOT WT_ROOT OWNER_REPO AGENT_USER HUMAN_USER ME BUDGET_TOKENS
+eval "$(npx @rtorcato/repo-ai loop env)"   # ROOT WT_ROOT OWNER_REPO AGENT_USER HUMAN_USER ME BUDGET_TOKENS QUIET_STOP_MINUTES
 TICK=$(npx @rtorcato/repo-ai loop tick --json --root "$ROOT"); TICK_EXIT=$?
 printf '%s' "$TICK" | jq '{halt, idle, summary, errors, warnings}'
 ```
@@ -687,10 +687,32 @@ not the tick's full cost.
 STATUS="$ROOT/.claude/ai-loop-status"   # absolute — a pinned tick's cwd is a worktree
 PREV=$(head -1 "$STATUS" 2>/dev/null)
 PREV_SUGGESTED=$(sed -n 2p "$STATUS" 2>/dev/null)
+CHANGED=$(sed -n 4p "$STATUS" 2>/dev/null)   # epoch line 1 last changed (#124)
+NOW=$(date +%s)
+case $CHANGED in '' | *[!0-9]*) CHANGED=$NOW ;; esac   # no line 4 counts as changed now
+[ "$SUMMARY" = "$PREV" ] || CHANGED=$NOW
 DIGEST=$(gh issue list -R "$OWNER_REPO" --label ai-suggested --state open --limit 100 \
   --json number,title --jq 'sort_by(.number) | .[] | "#\(.number) \(.title)"')
 SUGGESTED=$(printf '%s\n' "$DIGEST" | grep -o '^#[0-9]*' | tr -d '#' | paste -sd, -)
 ```
+
+**Quiet stop (#124).** An idle or waiting loop still costs about four turns an
+hour, each re-reading the whole session. So when it is not a halt,
+`QUIET_STOP_MINUTES` is not `0`, and
+`$(( (NOW - CHANGED) / 60 )) -ge QUIET_STOP_MINUTES` — the summary has sat
+unchanged that long, whether `idle` or waiting on you to merge — **stop the
+loop**:
+
+- `CronDelete` every `/ai-loop` job (`CronList` first) and `TaskStop` any
+  `loop watch` Monitor.
+- `SUMMARY="stopped·quiet${QUIET_STOP_MINUTES}m"`, and write the status file
+  with an empty third line (below). It notifies once, being a change.
+- Skip the job scheduling below and end with `Next tick: none — loop stopped
+  after <N>m unchanged; /ai-loop restarts it`.
+
+This is the one exception to "never delete the last job from here". Typing
+`/ai-loop` again restarts it as usual; its summary differs from `stopped·…`, so
+line 4 resets.
 
 - **`SUMMARY` != `PREV`** → notify. Going quiet is a change too, so the first
   `idle` tick notifies once.
@@ -736,20 +758,21 @@ the smaller change, and it keeps working if the halt clears in this session
 
 A recurring job, not a chain of one-shots: a tick that dies before this pass
 leaves the job firing, so the loop recovers on its own. Jobs end with the
-session and expire after 7 days. **Never delete the last job from here** — an
-idle loop is cheap, and a stopped one misses the next `ai-ready` issue. Only
-the user stops it ("stop the loop" → `CronDelete`).
+session and expire after 7 days. **Never delete the last job from here** — a
+stopped loop misses the next `ai-ready` issue — except for the quiet stop
+above. Otherwise only the user stops it ("stop the loop" → `CronDelete`).
 
-Write the status file **last** — `SUMMARY`, `SUGGESTED`, and when the next tick
-is due (empty when none). Its age is the liveness signal: ticks run at most 30
+Write the status file **last** — `SUMMARY`, `SUGGESTED`, when the next tick
+is due (empty when none), and `CHANGED`, the epoch line 1 last changed (`loop
+watch` keeps it the same way when it rewrites line 1). Its age is the liveness signal: ticks run at most 30
 minutes apart, so a file older than about 35 minutes means the loop has stopped,
 and a statusline should hide it past that. The third line is what lets a
 statusline say `next 9m` instead of leaving you to guess:
 
 ```bash
 NEXT=$(( $(date +%s) + DELAY ))   # ponytail: approximate — the job fires on its cron minutes
-[ "$SUMMARY" = "⚠halt" ] && NEXT=""   # a halt schedules nothing
-printf '%s\n%s\n%s\n' "$SUMMARY" "$SUGGESTED" "$NEXT" > "$STATUS"
+case $SUMMARY in ⚠halt | stopped·*) NEXT="" ;; esac   # a halt or quiet stop schedules nothing
+printf '%s\n%s\n%s\n%s\n' "$SUMMARY" "$SUGGESTED" "$NEXT" "$CHANGED" > "$STATUS"
 ```
 
 Print `SUMMARY` plus at most five lines — handed over, cleaned up, sent to
@@ -760,7 +783,8 @@ claude-skills` — say it, never run it). Then print `$DIGEST`, unless `$SUGGEST
 `Next tick: every 10m — say "stop the loop" to end it` (or `every 30m`). On a
 halt, name the fix instead: `Next tick: none — relaunch as <agentUser>, then
 /ai-loop` for an identity mismatch, or `Next tick: none — run /ai-loop from the
-main checkout` for a bare clone or linked worktree.
+main checkout` for a bare clone or linked worktree. After a quiet stop:
+`Next tick: none — loop stopped after <N>m unchanged; /ai-loop restarts it`.
 
 ---
 
@@ -793,7 +817,8 @@ It computes the tick's work list every `pollSeconds` (`.repo-ai.json`, default
 180, floor 60) and prints one line only when the actionable part changes — a
 halt once, until it clears. On each line, run a tick. While it runs, Pass 5
 keeps the job at the 30-minute fallback cadence. Re-arm it when the Monitor
-expires at 30 minutes. At the default that is 20 polls an hour, each a few
+expires at 30 minutes — unless no `/ai-loop` job exists (`CronList`): then the
+loop has stopped, quietly or by request, so let the watcher lapse. At the default that is 20 polls an hour, each a few
 GitHub API calls, against the 5,000/h limit.
 
 Ticks fire only while the REPL is idle, and only in this session: closing it

@@ -21,6 +21,8 @@ export interface RepoAiConfig {
 	pollSeconds?: number
 	/** Per-tick output-token cap for the `ai-loop-*` Workflow scripts (#41). */
 	budgetTokens?: number
+	/** Minutes of unchanged status before Pass 5 stops the loop (#124); `0` disables. */
+	quietStopMinutes?: number
 	source: ConfigSource
 }
 
@@ -43,6 +45,14 @@ const MIN_BUDGET_TOKENS = 1000
 
 function asBudgetTokens(value: unknown): number | undefined {
 	return typeof value === 'number' && Number.isFinite(value) && value >= MIN_BUDGET_TOKENS
+		? Math.floor(value)
+		: undefined
+}
+
+export const DEFAULT_QUIET_STOP_MINUTES = 120
+
+function asQuietStopMinutes(value: unknown): number | undefined {
+	return typeof value === 'number' && Number.isFinite(value) && value >= 0
 		? Math.floor(value)
 		: undefined
 }
@@ -71,6 +81,7 @@ export async function readConfig(dir: string): Promise<RepoAiConfig> {
 			requiredSkills: asSkillList(own.requiredSkills),
 			pollSeconds: asPollSeconds(own.pollSeconds),
 			budgetTokens: asBudgetTokens(own.budgetTokens),
+			quietStopMinutes: asQuietStopMinutes(own.quietStopMinutes),
 			source: 'repo-ai.json',
 		}
 	}

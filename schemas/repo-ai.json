@@ -30,6 +30,12 @@
       "minimum": 1000,
       "default": 400000,
       "description": "Output-token cap the ai-loop-pickup and ai-loop-pass3 Workflow scripts enforce per tick, on top of any interactive '+Nk' budget. Once spent, no further agent in that tick is queued — it is skipped, logged, and left for the next tick. Counts output tokens only (the Workflow runtime's budget.spent()); the harness's total, input and cache reads included, runs several times higher."
+    },
+    "quietStopMinutes": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 120,
+      "description": "Minutes the loop's status summary may stay unchanged before a tick stops the loop: it deletes its /ai-loop job and stops any `loop watch` Monitor. Typing /ai-loop restarts it. 0 disables the cutoff."
     }
   }
 }

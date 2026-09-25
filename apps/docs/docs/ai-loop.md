@@ -81,6 +81,7 @@ optional:
 | `requiredSkills` | string[] | `[]`: no check | `doctor`, which reports any listed skill that is not installed. Checked only when `agentUser` is set. |
 | `pollSeconds` | integer | `180`; values below `60` are raised to `60` | `loop watch`, between polls. Each poll costs several GitHub API calls against the 5,000/h limit. |
 | `budgetTokens` | integer | `400000`; values below `1000` are ignored | `loop env` (as `BUDGET_TOKENS`), passed to the `ai-loop-pickup` and `ai-loop-pass3` Workflow scripts, which enforce it — an agent past the cap is skipped and `log()`ged, not spawned. It bounds **output tokens only** (the Workflow runtime's `budget.spent()`, reported as `outputTokensSpent`); the harness's per-run total, input and cache reads included, runs several times higher. |
+| `quietStopMinutes` | integer | `120`; `0` disables | `loop env` (as `QUIET_STOP_MINUTES`). A tick that finds the status summary unchanged this long stops the loop — see [Driving it](#driving-it). |
 
 The schema is [`schemas/repo-ai.json`](https://rtorcato.github.io/repo-ai/repo-ai.json)
 (JSON Schema draft 2020-12), which ships in the npm package too. It sets
@@ -395,6 +396,15 @@ recurring job in this session, firing every 10 minutes while agents or reviews
 are in flight and every 30 when idle, so a quiet repo costs two ticks an hour.
 The job ends with the session and expires after 7 days. Say "stop the loop" to
 end it sooner. Don't wrap it in `/loop`.
+
+**It stops itself after a quiet period.** Even an idle or waiting loop costs
+about four turns an hour, each re-reading the whole session. Status file line 4
+records when the summary last changed; once it has sat unchanged for
+`quietStopMinutes` (default 120), whether `idle` or waiting on you to merge, the
+tick deletes its job, stops any `loop watch` Monitor, writes
+`stopped·quiet120m`, and ends with `Next tick: none — loop stopped after 120m
+unchanged; /ai-loop restarts it`. Type `/ai-loop` to restart. Set
+`quietStopMinutes` to `0` to tick until the session ends.
 
 **A halted tick schedules nothing.** A `loop guard` halt (wrong identity, or a
 bare clone or linked worktree as the root) holds for the whole session, so

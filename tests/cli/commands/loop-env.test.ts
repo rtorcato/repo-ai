@@ -96,6 +96,15 @@ describe('resolveLoopEnv', () => {
 		)
 	})
 
+	it('defaults QUIET_STOP_MINUTES to 120, and reads a configured 0', async () => {
+		const root = checkout(newTmpDir())
+		expect((await resolveLoopEnv({ dir: root, gh: fakeGh().gh, env: {} })).quietStopMinutes).toBe(
+			120
+		)
+		fs.writeJsonSync(join(root, '.repo-ai.json'), { quietStopMinutes: 0 })
+		expect((await resolveLoopEnv({ dir: root, gh: fakeGh().gh, env: {} })).quietStopMinutes).toBe(0)
+	})
+
 	it('leaves HUMAN_USER empty for an organisation repo', async () => {
 		const root = checkout(newTmpDir())
 		const env = await resolveLoopEnv({
@@ -125,11 +134,13 @@ describe('toShell', () => {
 			humanUser: 'h',
 			me: '$(id)',
 			budgetTokens: 400_000,
+			quietStopMinutes: 120,
 			warnings: [],
 		})
 		expect(out).toContain(`ROOT='/a'\\''b'`)
 		expect(out).toContain(`ME='$(id)'`)
 		expect(out).toContain(`AGENT_USER=''`)
 		expect(out).toContain(`BUDGET_TOKENS='400000'`)
+		expect(out).toContain(`QUIET_STOP_MINUTES='120'`)
 	})
 })
