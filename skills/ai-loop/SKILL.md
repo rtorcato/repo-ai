@@ -536,11 +536,11 @@ Launch it and **do not wait** — go on to Pass 4. Notes, so it doesn't get
 - **The script enforces its own caps (#41)** — the 8-task cap and
   `BUDGET_TOKENS` — so a task past either never spawns; it is `log()`ged and
   its claim label sits until the next tick adopts it, same as a dead agent.
-- **The result is `{tasks: [{label, result}, …], tokensSpent}`**, not a bare
+- **The result is `{tasks: [{label, result}, …], outputTokensSpent}`**, not a bare
   array. When the completion notification arrives, print one line per task
   (`code:#58 PASS`, `fix:#61 pushed`) and act on nothing. A `null` result is an
   agent that died: its claim stays until the next tick adopts a posted verdict
-  or `loop reap` clears it. Fold `tokensSpent` into Pass 5's report.
+  or `loop reap` clears it. Fold `outputTokensSpent` into Pass 5's report.
 
 ### Pass 4 — pick up
 
@@ -647,11 +647,11 @@ Notes, so it doesn't get "tidied" into breakage:
   skipped implementer leaves its issue `ai-wip` with no PR — `loop reap` treats
   it like a dead agent after 45 minutes. A skipped reviewer leaves the PR
   `ai-review`, which the next tick's Pass 3 claims normally.
-- **The result is `{issues: [{issue, …}], tokensSpent}`**, not a bare array.
+- **The result is `{issues: [{issue, …}], outputTokensSpent}`**, not a bare array.
   When the completion notification arrives, print one line per issue
   (`#82 → PR #90, code PASS, sec PASS` or `#83 blocked`) and act on nothing: the
   next tick's Pass 1 hands passed PRs over, and a `loop watch` Monitor wakes that
-  tick as soon as the labels change. Fold `tokensSpent` into Pass 5's report.
+  tick as soon as the labels change. Fold `outputTokensSpent` into Pass 5's report.
 
 ### Pass 5 — report
 
@@ -664,11 +664,15 @@ only where you deviated from the list; `⚠halt` on a halt. `ai-notes` never
 borrows the `⚠`.
 
 **Cost is visible, not just capped (#41).** Each Workflow's result carries
-`tokensSpent`; once a launched-but-not-yet-awaited Workflow's completion
-notification arrives (this tick or a later one), add its `tokensSpent` to a
+`outputTokensSpent`; once a launched-but-not-yet-awaited Workflow's completion
+notification arrives (this tick or a later one), add its `outputTokensSpent` to a
 running per-tick total and append it to `SUMMARY` as `·NtokK` (e.g. `·210tokK`
 for 210,000). A tick with no Workflow result yet omits it — there is nothing
-to report, not zero.
+to report, not zero. It counts **output tokens only** — the only measure the
+Workflow runtime's `budget.spent()` exposes, and the one `BUDGET_TOKENS` bounds
+(#117). The harness's own per-run total, input and cache reads included, runs
+several times higher (~8-9× observed), so read `·NtokK` as a relative gauge,
+not the tick's full cost.
 
 ```bash
 STATUS="$ROOT/.claude/ai-loop-status"   # absolute — a pinned tick's cwd is a worktree
