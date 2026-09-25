@@ -288,8 +288,10 @@ The bar is a finding that **changes whether or how a human should merge**: a
 semver implication, a deliberate omission, a risky migration, a decision only a
 human can make. An open question the reviewer couldn't settle from the diff is
 not a finding — it settles it with a read-only check, or passes clean, or files
-an `ai-suggested` issue when later work is needed. A note that concludes "no
-action needed" is never written.
+an `ai-suggested` issue when later work is needed. Those three outcomes apply
+only once `CHANGES` is ruled out: an open question that is itself an unverified
+risk (say, whether an input is sanitized) is a `CHANGES` candidate first, not a
+pass or a follow-up. A note that concludes "no action needed" is never written.
 `ai-notes` on every PR is the failure mode — it trains the reader to ignore it.
 
 ## Repo prerequisites

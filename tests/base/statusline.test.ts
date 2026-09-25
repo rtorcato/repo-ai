@@ -26,10 +26,10 @@ describe('statusline/ai-loop.sh', () => {
 		fs.outputFileSync(join(dir, '.claude', 'ai-loop-status'), text)
 	const inSeconds = (s: number) => Math.floor(Date.now() / 1000) + s
 
-	it('says "manual" when no next tick is recorded (#21)', () => {
+	it('prints the summary alone when no next tick is recorded (#94)', () => {
 		const dir = newTmpDir()
 		status(dir, '2wip·1rev\n12,14\n')
-		expect(run(dir)).toBe('🤖 2wip·1rev · manual')
+		expect(run(dir)).toBe('🤖 2wip·1rev')
 	})
 
 	it('counts down to the next tick', () => {
