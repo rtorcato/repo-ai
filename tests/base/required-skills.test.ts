@@ -14,11 +14,11 @@ async function install(dir: string, name: string, content: string): Promise<void
 
 describe('checkRequiredSkills (#533)', () => {
 	it('reports a skill that is not installed, without ever failing the exit code', async () => {
-		const r = await checkRequiredSkills(['ai-loop', 'ai-workflow'], newTmpDir())
+		const r = await checkRequiredSkills(['ai-loop', 'ai-tick'], newTmpDir())
 		// The whole point of the severity rule: a contributor with no Claude
 		// installed must not fail this repo's doctor.
 		expect(r.status).toBe('optional-missing')
-		expect(r.detail).toContain('not installed: ai-loop, ai-workflow')
+		expect(r.detail).toContain('not installed: ai-loop, ai-tick')
 		expect(r.hint).toContain('fix claude-skills')
 	})
 

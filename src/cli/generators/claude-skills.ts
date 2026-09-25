@@ -16,9 +16,16 @@ import { type GitExec, isNewerVersion, resolveShippedVersion } from '../utils/ve
 
 /**
  * Skills this package owns the content of and keeps up to date. The loop first —
- * it is the pipeline; the other three are its drivers (burst, on-ramp, status).
+ * it is the pipeline; the others are its on-ramp, status view and one-shot tick.
  */
-export const SHIPPED_SKILLS = ['ai-loop', 'ai-workflow', 'ai-issue', 'ai-loop-status', 'ai-tick']
+export const SHIPPED_SKILLS = ['ai-loop', 'ai-issue', 'ai-loop-status', 'ai-tick']
+
+/**
+ * Skills earlier releases shipped: `ai-issue-loop` became `ai-loop` (#56), and
+ * `ai-workflow` was folded into it (#87). A stale copy would still answer its
+ * old slash command, so `fix claude-skills` removes one it can prove is ours.
+ */
+export const RETIRED_SKILLS = ['ai-issue-loop', 'ai-workflow']
 
 /** The primary skill — the default everywhere a single name is accepted. */
 export const SHIPPED_SKILL = 'ai-loop'
@@ -341,4 +348,24 @@ export async function claudeSkillStatus(
 		contentState,
 		needsInstall: behind && contentState === 'pristine',
 	}
+}
+
+/**
+ * Remove one of `RETIRED_SKILLS`, but only a copy whose recorded hash still
+ * matches its content — anything else is somebody's edit, and stays (`kept`).
+ * A stow symlink stays too: deleting the link would orphan the dotfiles copy
+ * rather than remove it.
+ */
+export async function removeRetiredSkill(
+	skillsDir: string,
+	name: string
+): Promise<{ file: string; status: 'removed' | 'absent' | 'kept' }> {
+	const file = path.join(skillsDir, name, 'SKILL.md')
+	if (!(await fs.pathExists(file))) return { file, status: 'absent' }
+	const content = await fs.readFile(file, 'utf8')
+	if ((await isSymlink(file)) || readSkillHash(content) !== hashSkillContent(content)) {
+		return { file, status: 'kept' }
+	}
+	await fs.remove(path.dirname(file))
+	return { file, status: 'removed' }
 }

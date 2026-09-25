@@ -8,6 +8,7 @@ import {
 	installClaudeSkill,
 	readShippedSkill,
 	readSkillVersion,
+	removeRetiredSkill,
 	resolveSkillsDir,
 	SHIPPED_SKILL,
 	SHIPPED_SKILLS,
@@ -388,5 +389,25 @@ describe('installClaudeSkill — downgrade guard (#522)', () => {
 		expect(result.status).toBe('updated')
 		const written = await fs.readFile(skillFile(dir), 'utf8')
 		expect(readSkillVersion(written)).not.toBe('99.0.0')
+	})
+})
+
+describe('removeRetiredSkill (#87)', () => {
+	const write = (dir: string, content: string) =>
+		fs.outputFileSync(join(dir, 'ai-workflow', 'SKILL.md'), content)
+
+	it('removes a pristine copy, keeps an edited or unstamped one, and skips an absent one', async () => {
+		const dir = newTmpDir()
+		expect((await removeRetiredSkill(dir, 'ai-workflow')).status).toBe('absent')
+
+		write(dir, stampSkill('---\nname: ai-workflow\n---\nbody\n', '1.1.0'))
+		expect((await removeRetiredSkill(dir, 'ai-workflow')).status).toBe('removed')
+		expect(fs.existsSync(join(dir, 'ai-workflow'))).toBe(false)
+
+		write(dir, `${stampSkill('---\nname: ai-workflow\n---\nbody\n', '1.1.0')}mine\n`)
+		expect((await removeRetiredSkill(dir, 'ai-workflow')).status).toBe('kept')
+
+		write(dir, '---\nname: ai-workflow\n---\nbody\n')
+		expect((await removeRetiredSkill(dir, 'ai-workflow')).status).toBe('kept')
 	})
 })

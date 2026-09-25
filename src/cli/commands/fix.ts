@@ -9,12 +9,20 @@ import { applyLoopLabels } from '../../base/labels.js'
 import { installStatusline } from '../../base/statusline.js'
 import {
 	installClaudeSkill,
+	RETIRED_SKILLS,
+	removeRetiredSkill,
 	resolveSkillsDir,
 	SHIPPED_SKILLS,
 	type SkillInstallResult,
 	skillDiffCommand,
 } from '../generators/claude-skills.js'
-import { installWorkflow, SHIPPED_WORKFLOWS, workflowsDirFor } from '../generators/workflows.js'
+import {
+	installWorkflow,
+	RETIRED_WORKFLOWS,
+	removeRetiredWorkflow,
+	SHIPPED_WORKFLOWS,
+	workflowsDirFor,
+} from '../generators/workflows.js'
 
 export interface FixOptions {
 	dir: string
@@ -104,6 +112,21 @@ async function installSkills({ skillsDir, forceSkills, yes, json }: FixOptions) 
 			continue
 		}
 		if (result.status !== 'up-to-date') filesWritten.push(result.file)
+	}
+	// Renamed or folded-in names (#56, #87) — a stale copy still answers its old command.
+	const retired = [
+		...(await Promise.all(RETIRED_SKILLS.map((name) => removeRetiredSkill(dir, name)))),
+		...(await Promise.all(
+			RETIRED_WORKFLOWS.map((name) => removeRetiredWorkflow(workflowsDirFor(dir), name))
+		)),
+	]
+	for (const { file, status } of retired) {
+		if (status === 'removed') console.error(chalk.dim(`   removed retired ${file}`))
+		if (status === 'kept') {
+			console.error(
+				chalk.yellow(`   retired, but modified or symlinked — delete it yourself: ${file}`)
+			)
+		}
 	}
 	return filesWritten
 }

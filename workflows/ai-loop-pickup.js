@@ -1,5 +1,5 @@
 export const meta = {
-	name: 'ai-workflow',
+	name: 'ai-loop-pickup',
 	description: 'Implement labelled issues in parallel worktrees, review each, stop at open PRs',
 	phases: [
 		{ title: 'Implement', detail: 'one agent per issue, in its own worktree' },
@@ -54,7 +54,8 @@ const results = await pipeline(
 5. Do the work. Conventional Commits within the branch.
 6. Push and open the PR. The title must be a Conventional Commit — it becomes
    the squash subject and, under semantic-release, decides whether a release
-   goes out. Body must contain \`Closes #${i.number}\`. Then
+   goes out. The body opens with \`🤖 *Opened by an implementer via ai-loop.*\`
+   and contains \`Closes #${i.number}\`. Then
    \`gh pr edit --add-label ai-review\`.
 7. NEVER merge and NEVER approve.
 
@@ -85,7 +86,7 @@ The body MUST begin with a hidden verdict marker, then the header, then a blank
 line — every agent authenticates as the repo owner:
 
 <!-- ai-issue-loop:verdict:${v.arm}:<PASS|PASS-NOTES|CHANGES> -->
-🤖 *Automated review — \`${v.type}\` via ai-workflow.*
+🤖 *Automated review — \`${v.type}\` via ai-loop.*
 
 It must END with a \`### Before merging\` section — findings that change what a
 human would do at merge time, or exactly \`Nothing.\` Cap the body at that

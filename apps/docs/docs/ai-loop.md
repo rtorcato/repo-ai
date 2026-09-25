@@ -330,7 +330,7 @@ Passes run cheapest first, so a quiet repo exits fast.
 | **1 — merge** | Auto-merge only *Dependabot* PRs that passed both reviews. Hand every other ready PR to you as `merge-ready`, dropping `ai-review` and both `ai-ok-*`. Update a `BEHIND` branch with `gh pr update-branch`, keeping the reviews; wait on required checks still pending. Send back anything else GitHub reports as not `CLEAN`, or with a required check red. |
 | **2 — clean up** | Remove worktrees whose PR merged (confirming the squash is on `main` first), then reap stalls. |
 | **3 — review** | Queue the missing reviewers for `ai-review` PRs and a fix round for each `ai-changes` PR, then run them all in one Workflow (at most 8 agents) with typed verdicts. The agents still write the labels and verdict markers. |
-| **4 — pick up** | Claim eligible `ai-ready` issues, create the worktree, spawn an implementer. |
+| **4 — pick up** | Claim eligible `ai-ready` issues, create the worktrees, and run one Workflow: an implementer per issue, then two reviewers per PR. |
 | **5 — report** | One-line summary, notify only when it changed. Never skipped, including on an idle tick. |
 
 Three details worth knowing because they fail *silently* when got wrong:
@@ -340,12 +340,12 @@ Three details worth knowing because they fail *silently* when got wrong:
   exclude from their own tooling — observed on a repo whose Biome config carried
   `"!**/.claude"`, where the pre-commit hook linted *nothing* in every agent
   worktree and failed with a message that read like a tooling glitch.
-- **Implementers are spawned one at a time**, and reach their worktree through
-  `git -C <absolute path>` rather than by entering it. The worktree pin belongs to
-  the session, not the agent, so two implementers spawned together cross-pin: the
-  second lands in the first's tree, edits its own files fine, and only discovers
-  it cannot commit at the end. Reviewers never enter a worktree and still run
-  concurrently.
+- **Implementers never enter their worktree** — they reach it through
+  `git -C <absolute path>`. The worktree pin belongs to the session, not the
+  agent, so two implementers that each entered one would cross-pin: the second
+  lands in the first's tree, edits its own files fine, and only discovers it
+  cannot commit at the end. Without the pin they run concurrently, in one
+  Workflow.
 - **Pass 2 confirms the squash landed on `main`** before removing anything. A
   squash-merged branch always looks like it has unmerged commits, which is
   indistinguishable from work that was never merged at all.

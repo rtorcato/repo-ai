@@ -8,9 +8,7 @@ import { describe, expect, it } from 'vitest'
  * declared — so every `--add-assignee @me` handed work back to the machine that
  * had just given up on it (#606). The human is named via `HUMAN_USER` instead.
  */
-const skills = ['ai-loop', 'ai-workflow'].map((n) =>
-	join(import.meta.dirname, `../../skills/${n}/SKILL.md`)
-)
+const skills = ['ai-loop'].map((n) => join(import.meta.dirname, `../../skills/${n}/SKILL.md`))
 
 describe('ai loop skills never assign @me (#606)', () => {
 	it.each(skills)('%s uses no @me as an assignee', (path) => {
