@@ -603,7 +603,11 @@ purges the **main checkout's** modules, shared by every worktree; `loop guard
 
 Every issue claimed this tick goes into **one** `Workflow` call — none when
 nothing was claimed. Per issue it runs the implementer, then both reviewers the
-moment its PR opens:
+moment its PR opens, then **runs the fix rounds itself** (#129): any `CHANGES`
+spawns a fixer on that PR's worktree (Pass 3's fix-task prompt) and re-runs both
+reviewers on the new head, up to 2 rounds. Both passing, or the 2nd round still
+`CHANGES`, stops it — the next tick's Pass 1 hands a pass over, and Pass 3's
+`action: block` takes the 3rd `ai-changes`:
 
 ```
 Workflow({name: 'ai-loop-pickup', args: {repo: OWNER_REPO, agentUser: AGENT_USER, humanUser: HUMAN_USER, namedReviewers, budgetTokens: BUDGET_TOKENS, issues: [{number, title, slug, worktree}, …]}})
@@ -624,7 +628,8 @@ not wait** — go on to Pass 5.
 `workflows/ai-loop-pickup.js` (installed at `~/.claude/workflows/`), filled in
 per issue, and spawn implementers as background `Agent` calls **one at a time**,
 never more than `slots` (6 in flight). As each returns a PR, spawn its two
-reviewers together, with the script's reviewer prompts and claim labels.
+reviewers together, with the script's reviewer prompts and claim labels. Leave
+fix rounds to later ticks' Pass 3 on this path.
 `BUDGET_TOKENS` is **not** enforced on this path; the script enforced it. Add
 one line to Pass 5's report: `Workflow tool missing: Pass 4 ran as background
 agents, no token cap`.
@@ -637,19 +642,23 @@ Notes, so it doesn't get "tidied" into breakage:
   already in the sibling root where repo tooling can see them, and `EnterWorktree`
   relocates this session too. Implementers work via `git -C` and absolute paths,
   which is also why they can run concurrently.
-- **Reviewers claim their arm first** (`ai-reviewing-*`), so a later tick's
-  Pass 3 adopts their verdict markers instead of spawning duplicates. They sit
-  outside Pass 3's 8-task cap; `slots` bounds them instead.
+- **Reviewers claim their arm first** (`ai-reviewing-*`), and the fixer claims
+  `ai-fixing` and relabels on push, so a later tick's Pass 3 adopts their work
+  instead of spawning duplicates. They sit outside Pass 3's 8-task cap; `slots`
+  bounds them instead. Pass 3 stays the recovery path for a PR whose Workflow
+  died or stopped early.
 - **An implementer that gives up** labels its issue `ai-blocked`, hands it to
   `HUMAN_USER`, comments why, and returns `pr: null` — its PR gets no review.
 - **`BUDGET_TOKENS` is enforced in the script (#41)**, same as Pass 3: an
-  implementer or reviewer past the cap never spawns, just `log()`s a skip. A
-  skipped implementer leaves its issue `ai-wip` with no PR — `loop reap` treats
-  it like a dead agent after 45 minutes. A skipped reviewer leaves the PR
-  `ai-review`, which the next tick's Pass 3 claims normally.
-- **The result is `{issues: [{issue, …}], outputTokensSpent}`**, not a bare array.
-  When the completion notification arrives, print one line per issue
-  (`#82 → PR #90, code PASS, sec PASS` or `#83 blocked`) and act on nothing: the
+  implementer, reviewer or fixer past the cap never spawns, just `log()`s a
+  skip. A skipped implementer leaves its issue `ai-wip` with no PR — `loop reap`
+  treats it like a dead agent after 45 minutes. A skipped reviewer leaves the PR
+  `ai-review`, and a skipped fixer leaves it `ai-changes`; the next tick's
+  Pass 3 claims either normally.
+- **The result is `{issues: [{issue, pr, reviews, fixRounds}], outputTokensSpent}`**,
+  not a bare array; `reviews` is the last round's verdicts. When the completion
+  notification arrives, print one line per issue
+  (`#82 → PR #90, code PASS, sec PASS, 1 fix round` or `#83 blocked`) and act on nothing: the
   next tick's Pass 1 hands passed PRs over, and a `loop watch` Monitor wakes that
   tick as soon as the labels change. Fold `outputTokensSpent` into Pass 5's report.
 
