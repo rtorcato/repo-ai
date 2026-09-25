@@ -4,8 +4,8 @@ import { type GhExec, realGhExec } from './gh.js'
 import type { CheckResult } from './types.js'
 
 /**
- * `aiLoop.agentUser` assignability (#530). The skills that consume the option
- * (`ai-loop`, `ai-workflow`) verify it at runtime and *silently assign
+ * `aiLoop.agentUser` assignability (#530). The skill that consumes the option
+ * (`ai-loop`) verifies it at runtime and *silently assigns
  * nothing* on failure — by design, so a deleted bot account or a bot never
  * added as a collaborator degrades the loop with no visible symptom. This
  * check is where that failure becomes visible.

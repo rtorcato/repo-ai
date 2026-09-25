@@ -19,7 +19,10 @@ import { isNewerVersion, resolveShippedVersion } from '../utils/version.js'
 import { type SkillContentState, VERSION_KEY, HASH_KEY } from './claude-skills.js'
 
 /** Each is `workflows/<name>.js` here, and runs as `Workflow({name})`. */
-export const SHIPPED_WORKFLOWS = ['ai-workflow', 'ai-loop-pass3']
+export const SHIPPED_WORKFLOWS = ['ai-loop-pickup', 'ai-loop-pass3']
+
+/** Scripts earlier releases shipped — `ai-workflow` is `ai-loop-pickup` since #87. */
+export const RETIRED_WORKFLOWS = ['ai-workflow']
 
 const STAMP_LINE = new RegExp(`^// (?:${VERSION_KEY}|${HASH_KEY}): .*\\n?`, 'gm')
 
@@ -108,4 +111,17 @@ export async function installWorkflow(
 	if (existing === next) return { ...base, status: 'up-to-date' }
 	if (!dryRun) await fs.outputFile(file, next)
 	return { ...base, status: existing === null ? 'installed' : 'updated' }
+}
+
+/** `removeRetiredSkill`, for one of `RETIRED_WORKFLOWS`. */
+export async function removeRetiredWorkflow(
+	dir: string,
+	name: string
+): Promise<{ file: string; status: 'removed' | 'absent' | 'kept' }> {
+	const file = path.join(dir, `${name}.js`)
+	if (!(await fs.pathExists(file))) return { file, status: 'absent' }
+	const content = await fs.readFile(file, 'utf8')
+	if (readStamp(content, HASH_KEY) !== hashWorkflowContent(content)) return { file, status: 'kept' }
+	await fs.remove(file)
+	return { file, status: 'removed' }
 }

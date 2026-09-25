@@ -24,8 +24,8 @@ repo-side standard the loop relies on — branch protection, auto-merge, and the
 
 ## What it ships
 
-- **Claude Code skills** — `ai-workflow` (the entry point), `ai-loop` (the
-  engine), `ai-issue` (the on-ramp), `ai-loop-status` (a read-only view), and
+- **Claude Code skills** — `ai-loop` (the entry point and the engine),
+  `ai-issue` (the on-ramp), `ai-loop-status` (a read-only view), and
   `ai-tick` (one tick now).
 - **`loop` commands** — the mechanics the skills call, as tested code:
   `loop tick`, `loop guard`, `loop worktree add`, `loop reap`, and more.
@@ -38,7 +38,7 @@ Every command takes `--json`.
 
 1. Run `npx @rtorcato/repo-ai setup` — skills, labels, agent identity and statusline, asking before each.
 2. Check the repo meets the [prerequisites](./ai-loop.md#repo-prerequisites).
-3. File an issue with `/ai-issue`, then run `/ai-workflow` in Claude Code.
+3. File an issue with `/ai-issue`, then run `/loop /ai-loop` in Claude Code.
 
 Read [The AI Loop](./ai-loop.md) for how the pipeline works, and
 [Commands](./commands.md) for every command.

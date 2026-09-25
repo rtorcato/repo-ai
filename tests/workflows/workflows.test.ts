@@ -121,12 +121,12 @@ describe('ai-loop-pass3', () => {
 	})
 })
 
-describe('ai-workflow', () => {
+describe('ai-loop-pickup', () => {
 	const issue = (number: number) => ({ number, title: 't', slug: `ai-${number}-x`, worktree: '/w' })
 
 	it('reviews each opened PR with both arms, and skips review of a blocked issue', async () => {
 		const { value, spawned } = await run(
-			'ai-workflow',
+			'ai-loop-pickup',
 			{
 				repo: 'o/r',
 				agentUser: '',
@@ -161,28 +161,31 @@ describe('installWorkflow', () => {
 	it('installs beside the skills dir, stamped, then reports up-to-date', async () => {
 		const { skills, dir } = setup()
 		expect(dir).toBe(join(skills, '..', 'workflows'))
-		expect((await installWorkflow(dir, 'ai-workflow')).status).toBe('installed')
-		const written = fs.readFileSync(join(dir, 'ai-workflow.js'), 'utf8')
+		expect((await installWorkflow(dir, 'ai-loop-pickup')).status).toBe('installed')
+		const written = fs.readFileSync(join(dir, 'ai-loop-pickup.js'), 'utf8')
 		expect(written.startsWith('export const meta = {')).toBe(true)
 		expect(written).toMatch(/^\/\/ repo-ai-hash: [0-9a-f]{64}$/m)
-		expect((await installWorkflow(dir, 'ai-workflow')).status).toBe('up-to-date')
+		expect((await installWorkflow(dir, 'ai-loop-pickup')).status).toBe('up-to-date')
 	})
 
 	it('refreshes a stale pristine copy, refuses a fork, and overwrites it under force', async () => {
 		const { dir } = setup()
-		const file = join(dir, 'ai-workflow.js')
+		const file = join(dir, 'ai-loop-pickup.js')
 		fs.outputFileSync(file, stampWorkflow('export const meta = {}\n', '0.0.1'))
-		expect((await installWorkflow(dir, 'ai-workflow')).status).toBe('updated')
+		expect((await installWorkflow(dir, 'ai-loop-pickup')).status).toBe('updated')
 
 		fs.appendFileSync(file, 'log("mine")\n')
-		expect((await installWorkflow(dir, 'ai-workflow')).status).toBe('declined-fork')
-		expect((await installWorkflow(dir, 'ai-workflow', { force: true })).status).toBe('updated')
+		expect((await installWorkflow(dir, 'ai-loop-pickup')).status).toBe('declined-fork')
+		expect((await installWorkflow(dir, 'ai-loop-pickup', { force: true })).status).toBe('updated')
 	})
 
 	it('refuses a downgrade', async () => {
 		const { dir } = setup()
-		fs.outputFileSync(join(dir, 'ai-workflow.js'), stampWorkflow(source('ai-workflow'), '999.0.0'))
-		expect((await installWorkflow(dir, 'ai-workflow')).status).toBe('declined-downgrade')
+		fs.outputFileSync(
+			join(dir, 'ai-loop-pickup.js'),
+			stampWorkflow(source('ai-loop-pickup'), '999.0.0')
+		)
+		expect((await installWorkflow(dir, 'ai-loop-pickup')).status).toBe('declined-downgrade')
 	})
 })
 
