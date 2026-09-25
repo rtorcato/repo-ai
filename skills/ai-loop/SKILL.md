@@ -516,6 +516,13 @@ The script is `workflows/ai-loop-pass3.js` in this package, installed to
 if `Workflow` reports no workflow by that name, run
 `npx @rtorcato/repo-ai fix claude-skills` and call it again.
 
+**No `Workflow` tool?** (Not every harness has one.) Spawn the same tasks as
+background `Agent` calls instead: one per review or fix task, same prompt, same
+`agentType` (fixers `general-purpose`), all in one message. The 8-task cap still
+holds, now in prose only. `BUDGET_TOKENS` is **not** enforced on this path: the
+script enforced it, and there is no script here. Add one line to Pass 5's report:
+`Workflow tool missing: Pass 3 ran as N background agents, no token cap`.
+
 Launch it and **do not wait** — go on to Pass 4. Notes, so it doesn't get
 "tidied" into breakage:
 
@@ -611,7 +618,18 @@ reviewers run as `general-purpose` with the same prompt (#611). Pass
 The script is `workflows/ai-loop-pickup.js` in this package, installed beside
 `ai-loop-pass3`; run it by name, and on "no workflow by that name" run
 `npx @rtorcato/repo-ai fix claude-skills` and call it again. Launch it and **do
-not wait** — go on to Pass 5. Notes, so it doesn't get "tidied" into breakage:
+not wait** — go on to Pass 5.
+
+**No `Workflow` tool?** Take the implementer prompt from
+`workflows/ai-loop-pickup.js` (installed at `~/.claude/workflows/`), filled in
+per issue, and spawn implementers as background `Agent` calls **one at a time**,
+never more than `slots` (6 in flight). As each returns a PR, spawn its two
+reviewers together, with the script's reviewer prompts and claim labels.
+`BUDGET_TOKENS` is **not** enforced on this path; the script enforced it. Add
+one line to Pass 5's report: `Workflow tool missing: Pass 4 ran as background
+agents, no token cap`.
+
+Notes, so it doesn't get "tidied" into breakage:
 
 - **`pipeline`, not `parallel`** — issue B's reviewers start the moment B's PR
   opens, without waiting for issue A's implementer.
