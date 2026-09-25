@@ -47,6 +47,6 @@ The skills call these; you rarely need them directly.
 
 | Skill | Role |
 |---|---|
-| `/ai-loop` | **Start here, as `/loop /ai-loop`.** One stateless tick: implements the `ai-ready` queue in parallel worktrees, then carries the PRs through review, fix rounds and cleanup on later ticks. |
+| `/ai-loop` | **Start here.** Implements the `ai-ready` queue in parallel worktrees, then keeps itself going in this session, carrying the PRs through review, fix rounds and cleanup. Type it again to tick now. |
 | `/ai-issue` | File an issue labelled `ai-ready` for the loop to pick up. |
 | `/ai-loop-status` | Read-only: what the loop is doing, and what is blocked. |

@@ -37,7 +37,7 @@ Every command takes `--json`.
 
 1. Run `npx @rtorcato/repo-ai setup` — skills, labels, agent identity and statusline, asking before each.
 2. Check the repo meets the [prerequisites](./ai-loop.md#repo-prerequisites).
-3. File an issue with `/ai-issue`, then run `/loop /ai-loop` in Claude Code.
+3. File an issue with `/ai-issue`, then run `/ai-loop` in Claude Code.
 
 Read [The AI Loop](./ai-loop.md) for how the pipeline works, and
 [Commands](./commands.md) for every command.

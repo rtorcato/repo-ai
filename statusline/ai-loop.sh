@@ -13,7 +13,7 @@
 # directory, falling back to $PWD. Call it from an existing statusline script
 # with that script's cwd: "$HOME/.claude/ai-loop-statusline.sh" "$cwd"
 
-# The self-paced loop ticks at most 30 minutes apart, so older than this means
+# The loop ticks at most 30 minutes apart, so older than this means
 # the loop has stopped — and a dead loop must not keep claiming work in flight.
 STALE_AFTER=2100
 

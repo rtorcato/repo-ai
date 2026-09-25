@@ -81,15 +81,15 @@ argument.
      -maxdepth 1 -name 'ai-*' -type d 2>/dev/null
    ```
 
-5. **Check the schedule** — if a scheduler is available (e.g. `CronList`),
-   report whether an `/ai-loop` job is actually scheduled, its cadence,
-   and whether it dies with the session. A pipeline with labels but no job is
-   stalled, and that is the single most likely reason nothing is moving.
+5. **Check the schedule** — `/ai-loop` keeps one recurring `CronCreate` job
+   whose prompt is `/ai-loop`. In the session running it, `CronList` shows
+   that job and its cadence (10 or 30 minutes); it dies with the session. A
+   pipeline with labels but no job is stalled, and that is the single most
+   likely reason nothing is moving.
 
-   A self-paced `/loop /ai-loop` may not show up as a job: each tick
-   schedules only the next one. Then the evidence is the status file's age —
-   ticks run at most 30 minutes apart, so a file older than about 35 minutes
-   means the loop has stopped:
+   From any other session the job is invisible, so the evidence is the status
+   file's age — ticks run at most 30 minutes apart, so a file older than about
+   35 minutes means the loop has stopped:
 
    ```bash
    STATUS="$ROOT/.claude/ai-loop-status"
@@ -99,7 +99,7 @@ argument.
 
    Line 3 is when the next tick is due. Report it as `next tick in Nm`,
    `next tick overdue` (due but the REPL has been busy), or, when it is
-   empty, `no tick scheduled — the last one was run by hand`.
+   empty, `no tick scheduled`.
 
 6. **Verify the merge gate only when something looks stuck** — skip these on a
    healthy run, they are noise:
@@ -119,7 +119,7 @@ argument.
    ```
    ai-loop — <repo> — <date>
 
-   Schedule: self-paced, last tick 8m ago, next tick in 2m   (or: no tick scheduled, or: NOT RUNNING)
+   Schedule: every 10m, last tick 8m ago, next tick in 2m   (or: no tick scheduled, or: NOT RUNNING)
 
    In flight (2/6 slots):
      #41  add a --json flag to doctor        PR #58  ai-review, waiting on security-expert

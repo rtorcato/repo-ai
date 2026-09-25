@@ -107,9 +107,8 @@ const EXAMPLES: { label: string; file: string; code: string }[] = [
 		label: 'run',
 		file: 'In Claude Code',
 		code: `/ai-issue "Add --json to the reap command"   # file an ai-ready issue
-/loop /ai-loop                              # work the queue, then babysit the PRs
-/ai-loop-status                             # read-only: what is the loop doing?
-/ai-loop                                    # run one tick now`,
+/ai-loop                                    # work the queue, then keep babysitting the PRs
+/ai-loop-status                             # read-only: what is the loop doing?`,
 	},
 	{
 		label: 'audit',
