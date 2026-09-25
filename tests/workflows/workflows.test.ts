@@ -205,9 +205,70 @@ describe('ai-loop-pickup', () => {
 			'general-purpose',
 		])
 		expect(value).toEqual({
-			issues: [{ issue: 1, 0: { passed: true }, 1: { passed: true } }, { issue: 2 }],
+			issues: [
+				{ issue: 1, pr: 10, reviews: [{ passed: true }, { passed: true }], fixRounds: 0 },
+				{ issue: 2, pr: null },
+			],
 			outputTokensSpent: 0,
 		})
+	})
+
+	const one = {
+		repo: 'o/r',
+		agentUser: '',
+		humanUser: '',
+		namedReviewers: false,
+		issues: [issue(1)],
+	}
+
+	it('runs a fixer on CHANGES, then re-reviews the new head with both arms', async () => {
+		const { value, spawned, prompts } = await run('ai-loop-pickup', one, (label) =>
+			label === 'impl:#1'
+				? { pr: 10 }
+				: label.startsWith('fix')
+					? { pushed: true }
+					: { passed: label !== 'code-reviewer:#1' }
+		)
+		expect(spawned.map((s) => `${s.phase} ${s.label}`)).toEqual([
+			'Implement impl:#1',
+			'Review code-reviewer:#1',
+			'Review security-expert:#1',
+			'Fix fix:#1:r1',
+			'Review code-reviewer:#1:r1',
+			'Review security-expert:#1:r1',
+		])
+		expect(prompts[3]).toContain('--add-label ai-fixing')
+		expect(prompts[3]).toContain('git -C "/w"')
+		expect(value).toMatchObject({ issues: [{ issue: 1, pr: 10, fixRounds: 1 }] })
+	})
+
+	it('stops after 2 fix rounds of CHANGES, with no third fixer', async () => {
+		const { value, spawned } = await run('ai-loop-pickup', one, (label) =>
+			label === 'impl:#1'
+				? { pr: 10 }
+				: label.startsWith('fix')
+					? { pushed: true }
+					: { passed: false }
+		)
+		expect(spawned.filter((s) => s.phase === 'Fix').map((s) => s.label)).toEqual([
+			'fix:#1:r1',
+			'fix:#1:r2',
+		])
+		expect(spawned).toHaveLength(9)
+		expect(value).toMatchObject({
+			issues: [{ fixRounds: 2, reviews: [{ passed: false }, { passed: false }] }],
+		})
+	})
+
+	it('skips the fixer past the token budget and logs it', async () => {
+		const { value, spawned, logs } = await run(
+			'ai-loop-pickup',
+			{ ...one, budgetTokens: 120_000 },
+			(label) => (label === 'impl:#1' ? { pr: 10 } : { passed: false })
+		)
+		expect(spawned.map((s) => s.phase)).toEqual(['Implement', 'Review', 'Review'])
+		expect(logs.join()).toContain('skipped fix:#1:r1 — token budget exhausted')
+		expect(value).toMatchObject({ issues: [{ fixRounds: 0 }] })
 	})
 
 	it('stops queuing past the token budget, spending it on the first issue', async () => {
@@ -224,7 +285,10 @@ describe('ai-loop-pickup', () => {
 			(label) => (label === 'impl:#1' ? { pr: 10 } : { passed: true })
 		)
 		expect(spawned.map((s) => s.label)).toEqual(['impl:#1'])
-		expect((value as { issues: unknown[] }).issues).toEqual([{ issue: 1 }, { issue: 2 }])
+		expect((value as { issues: unknown[] }).issues).toEqual([
+			{ issue: 1, pr: 10, reviews: [], fixRounds: 0 },
+			{ issue: 2 },
+		])
 		expect(logs.join()).toContain('impl:#2')
 		expect(logs.join()).toContain('token budget exhausted')
 	})
