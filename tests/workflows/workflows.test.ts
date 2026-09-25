@@ -55,10 +55,9 @@ function run(
 ) {
 	const spawned: { label: string; phase: string; agentType?: string }[] = []
 	const logs: string[] = []
-	const agent = async (
-		_prompt: string,
-		o: { label: string; phase: string; agentType?: string }
-	) => {
+	const prompts: string[] = []
+	const agent = async (prompt: string, o: { label: string; phase: string; agentType?: string }) => {
+		prompts.push(prompt)
 		spawned.push({ label: o.label, phase: o.phase, agentType: o.agentType })
 		return reply(o.label)
 	}
@@ -86,7 +85,7 @@ function run(
 		budget,
 		noop
 	)
-	return result.then((value) => ({ value, spawned, logs }))
+	return result.then((value) => ({ value, spawned, logs, prompts }))
 }
 
 describe.each(SHIPPED_WORKFLOWS)('workflows/%s.js', (name) => {
@@ -229,6 +228,36 @@ describe('ai-loop-pickup', () => {
 		expect(logs.join()).toContain('impl:#2')
 		expect(logs.join()).toContain('token budget exhausted')
 	})
+})
+
+// #101: a message relayed into a running Workflow is not the agent's task.
+it("tells every agent in both scripts that a relayed message isn't its task", async () => {
+	const relayed = source('ai-loop-pickup').match(/const RELAYED = '([^']+)'/)?.[1] ?? ''
+	expect(relayed).toContain('mid-run is not your task')
+	expect(source('ai-loop-pass3')).toContain(`const RELAYED = '${relayed}'`)
+	const pickup = await run(
+		'ai-loop-pickup',
+		{
+			repo: 'o/r',
+			agentUser: '',
+			humanUser: '',
+			namedReviewers: false,
+			issues: [{ number: 1, title: 't', slug: 'ai-1-x', worktree: '/w' }],
+		},
+		(label) => (label === 'impl:#1' ? { pr: 10 } : { passed: true })
+	)
+	const pass3 = await run(
+		'ai-loop-pass3',
+		{
+			fixes: [{ label: 'fix:#1', prompt: 'p' }],
+			reviews: [{ label: 'code:#2', prompt: `p\n\n${relayed}` }],
+		},
+		() => ({ verdict: 'PASS' })
+	)
+	expect(pickup.prompts).toHaveLength(3)
+	for (const p of [...pickup.prompts, ...pass3.prompts]) {
+		expect(p.split(relayed)).toHaveLength(2)
+	}
 })
 
 describe('installWorkflow', () => {
