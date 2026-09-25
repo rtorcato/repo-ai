@@ -19,6 +19,8 @@ export interface RepoAiConfig {
 	requiredSkills?: string[]
 	/** `loop watch`'s poll interval, floored at {@link MIN_POLL_SECONDS}. */
 	pollSeconds?: number
+	/** Per-tick output-token cap for the `ai-loop-*` Workflow scripts (#41). */
+	budgetTokens?: number
 	source: ConfigSource
 }
 
@@ -33,6 +35,15 @@ export const MIN_POLL_SECONDS = 60
 function asPollSeconds(value: unknown): number | undefined {
 	return typeof value === 'number' && Number.isFinite(value)
 		? Math.max(MIN_POLL_SECONDS, Math.floor(value))
+		: undefined
+}
+
+export const DEFAULT_BUDGET_TOKENS = 400_000
+const MIN_BUDGET_TOKENS = 1000
+
+function asBudgetTokens(value: unknown): number | undefined {
+	return typeof value === 'number' && Number.isFinite(value) && value >= MIN_BUDGET_TOKENS
+		? Math.floor(value)
 		: undefined
 }
 
@@ -59,6 +70,7 @@ export async function readConfig(dir: string): Promise<RepoAiConfig> {
 			agentUser: asLogin(own.agentUser),
 			requiredSkills: asSkillList(own.requiredSkills),
 			pollSeconds: asPollSeconds(own.pollSeconds),
+			budgetTokens: asBudgetTokens(own.budgetTokens),
 			source: 'repo-ai.json',
 		}
 	}

@@ -28,6 +28,14 @@ describe('readConfig', () => {
 		expect((await readConfig(dir)).pollSeconds).toBe(60)
 	})
 
+	it('reads budgetTokens, ignoring a value below the 1000 floor', async () => {
+		const dir = newTmpDir()
+		fs.outputJsonSync(join(dir, '.repo-ai.json'), { budgetTokens: 50_000 })
+		expect((await readConfig(dir)).budgetTokens).toBe(50_000)
+		fs.outputJsonSync(join(dir, '.repo-ai.json'), { budgetTokens: 10 })
+		expect((await readConfig(dir)).budgetTokens).toBeUndefined()
+	})
+
 	it('falls back to .repo-tooling.json rules.aiLoop / rules.requiredSkills', async () => {
 		const dir = newTmpDir()
 		fs.outputJsonSync(join(dir, '.repo-tooling.json'), {
