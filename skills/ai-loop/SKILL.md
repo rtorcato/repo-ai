@@ -403,7 +403,10 @@ Reviewer prompt template:
 > matters, settle it with a read-only check you're allowed to run (e.g. `gh
 > api`); otherwise pass with `Nothing.`, or file an `ai-suggested` issue (below)
 > when later work is actually needed. Never write a note that concludes "no
-> action needed" — that is `Nothing.`.
+> action needed" — that is `Nothing.`. Those three outcomes apply only once
+> you've ruled out `CHANGES`: an open question that is itself an unverified
+> risk (e.g. you can't tell whether an input is sanitized) is a `CHANGES`
+> candidate first, not a pass or a follow-up.
 >
 > **Later work is an issue you file, not that section** — never "optional" or
 > "non-blocking" there:
