@@ -590,6 +590,14 @@ export function summarize(r: LoopTickResult, inFlight: number, loopPrs: number):
 	)
 }
 
+/** Plain-text errors and warnings, each prefixed and coloured so an advisory never reads as a failure. */
+export function problemLines(r: Pick<LoopTickResult, 'errors' | 'warnings'>): string[] {
+	return [
+		...r.errors.map((e) => `  ${chalk.red(`error: ${e}`)}`),
+		...r.warnings.map((w) => `  ${chalk.yellow(`warning: ${w}`)}`),
+	]
+}
+
 export async function loopTickCommand(options: { root?: string; json?: boolean }): Promise<void> {
 	const result = await runLoopTick(options)
 	if (options.json) {
@@ -598,7 +606,7 @@ export async function loopTickCommand(options: { root?: string; json?: boolean }
 		console.error(chalk.red(`✖ halt: ${result.halt}`))
 	} else {
 		console.log(result.summary)
-		for (const e of [...result.errors, ...result.warnings]) console.log(`  ${chalk.yellow(e)}`)
+		for (const line of problemLines(result)) console.log(line)
 	}
 	process.exitCode = result.exitCode
 }
