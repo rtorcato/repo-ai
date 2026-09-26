@@ -23,6 +23,8 @@ export interface RepoAiConfig {
 	budgetTokens?: number
 	/** Minutes of unchanged status before Pass 5 stops the loop (#124); `0` disables. */
 	quietStopMinutes?: number
+	/** Opt-in to unattended merges on a release-gated repo (#142); absent means off. */
+	autoMerge?: boolean
 	source: ConfigSource
 }
 
@@ -82,6 +84,7 @@ export async function readConfig(dir: string): Promise<RepoAiConfig> {
 			pollSeconds: asPollSeconds(own.pollSeconds),
 			budgetTokens: asBudgetTokens(own.budgetTokens),
 			quietStopMinutes: asQuietStopMinutes(own.quietStopMinutes),
+			autoMerge: own.autoMerge === true,
 			source: 'repo-ai.json',
 		}
 	}

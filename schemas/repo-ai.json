@@ -36,6 +36,11 @@
       "minimum": 0,
       "default": 120,
       "description": "Minutes the loop's status summary may stay unchanged before a tick stops the loop: it deletes its /ai-loop job and stops any `loop watch` Monitor. Typing /ai-loop restarts it. 0 disables the cutoff."
+    },
+    "autoMerge": {
+      "type": "boolean",
+      "default": false,
+      "description": "Let the loop merge a fully-passed issue PR unattended. Takes effect only when the repo is also release-gated (its publishing job runs behind an environment with required_reviewers). Unset or false, every issue PR stops for a human."
     }
   }
 }

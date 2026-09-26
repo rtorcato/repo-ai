@@ -16,6 +16,7 @@ describe('readConfig', () => {
 		expect(await readConfig(dir)).toEqual({
 			agentUser: 'some-bot',
 			requiredSkills: ['ai-loop'],
+			autoMerge: false,
 			source: 'repo-ai.json',
 		})
 	})
@@ -42,6 +43,14 @@ describe('readConfig', () => {
 		expect((await readConfig(dir)).quietStopMinutes).toBe(0)
 		fs.outputJsonSync(join(dir, '.repo-ai.json'), { quietStopMinutes: -5 })
 		expect((await readConfig(dir)).quietStopMinutes).toBeUndefined()
+	})
+
+	it('reads autoMerge only when literally true (#142)', async () => {
+		const dir = newTmpDir()
+		fs.outputJsonSync(join(dir, '.repo-ai.json'), { autoMerge: true })
+		expect((await readConfig(dir)).autoMerge).toBe(true)
+		fs.outputJsonSync(join(dir, '.repo-ai.json'), { autoMerge: 'yes' })
+		expect((await readConfig(dir)).autoMerge).toBe(false)
 	})
 
 	it('falls back to .repo-tooling.json rules.aiLoop / rules.requiredSkills', async () => {
@@ -71,6 +80,7 @@ describe('readConfig', () => {
 		expect(await readConfig(dir)).toEqual({
 			agentUser: 'new-bot',
 			requiredSkills: undefined,
+			autoMerge: false,
 			source: 'repo-ai.json',
 		})
 	})
@@ -93,6 +103,7 @@ describe('readConfig', () => {
 		expect(await readConfig(dir)).toEqual({
 			agentUser: undefined,
 			requiredSkills: undefined,
+			autoMerge: false,
 			source: 'repo-ai.json',
 		})
 	})

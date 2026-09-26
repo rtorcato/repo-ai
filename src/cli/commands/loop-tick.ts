@@ -3,6 +3,7 @@ import chalk from 'chalk'
 import fs from 'fs-extra'
 import { type GitExec, realGitExec } from '../../base/git.js'
 import { type GhExec, realGhExec } from '../../base/gh.js'
+import { readConfig } from '../../base/config.js'
 import { releaseGated } from '../../base/release-gate.js'
 import { claudeSkillStatus, SHIPPED_SKILLS } from '../generators/claude-skills.js'
 import { installWorkflow, SHIPPED_WORKFLOWS, workflowsDirFor } from '../generators/workflows.js'
@@ -335,6 +336,8 @@ export async function runLoopTick(options: LoopTickOptions = {}): Promise<LoopTi
 		'number,body',
 	])
 	result.releaseGated = await releaseGated(gh, ownerRepo, root)
+	// Both keys: the repo's explicit opt-in and a human gate before the registry (#142).
+	const autoMerge = (await readConfig(root)).autoMerge === true && result.releaseGated
 
 	for (const pr of prs ?? []) {
 		const labels = new Set(pr.labels.map((l) => l.name))
@@ -408,7 +411,7 @@ export async function runLoopTick(options: LoopTickOptions = {}): Promise<LoopTi
 					pr: pr.number,
 					issue,
 					notes,
-					autoMerge: result.releaseGated && !notes,
+					autoMerge: autoMerge && !notes,
 				})
 			} else if (s === 'BEHIND') {
 				result.updateBranches.push({ pr: pr.number, issue })

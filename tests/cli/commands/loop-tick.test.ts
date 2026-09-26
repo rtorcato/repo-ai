@@ -78,6 +78,8 @@ interface World {
 	changes?: Record<number, number>
 	/** PR → `gh pr diff --name-only`. */
 	diffs?: Record<number, string[]>
+	/** The `release` environment carries `required_reviewers`. */
+	gated?: boolean
 }
 
 function fakeGh(w: World): GhExec {
@@ -92,7 +94,12 @@ function fakeGh(w: World): GhExec {
 		if (a === 'api') {
 			if (b === 'user') return ok('me-bot\n')
 			if (b === 'repos/acme/widget') return ok('acme\n')
-			if (b === 'repos/acme/widget/environments') return ok({ environments: [] })
+			if (b === 'repos/acme/widget/environments')
+				return ok({
+					environments: w.gated
+						? [{ name: 'release', protection_rules: [{ type: 'required_reviewers' }] }]
+						: [],
+				})
 			if (b === 'repos/acme/widget/assignees/agent-bot') return ok('')
 			if (b?.startsWith('repos/acme/widget/issues?')) return ok(w.queue ?? [])
 			const timeline = b?.match(/issues\/(\d+)\/timeline/)
@@ -256,6 +263,48 @@ describe('runLoopTick', () => {
 		expect(r.slots).toBe(3)
 		expect(r.idle).toBe(false)
 		expect(r.summary).toBe('⚠1blocked·⚠1ci-red·4wip·6rev·1ready')
+	})
+
+	describe('autoMerge needs the opt-in and the release gate (#142)', () => {
+		const tick = async (optIn: boolean, gated: boolean) => {
+			const root = checkout(newTmpDir())
+			fs.outputFileSync(
+				join(root, '.github/workflows/release.yml'),
+				'jobs:\n  release:\n    environment: release\n    steps:\n      - run: npx semantic-release\n'
+			)
+			if (optIn) fs.outputJsonSync(join(root, '.repo-ai.json'), { autoMerge: true })
+			git(root, 'add', '-A')
+			git(root, 'commit', '-q', '-m', 'setup')
+			const r = await runLoopTick({
+				root,
+				env: {},
+				now: NOW,
+				gh: fakeGh({
+					gated,
+					wip: [1],
+					prs: [pr(10, 'ai-1-ready', ['ai-review', 'ai-ok-code', 'ai-ok-sec'])],
+					merge: { 10: 'CLEAN' },
+				}),
+			})
+			expect(r.releaseGated).toBe(gated)
+			return r.handoffs
+		}
+
+		it('release-gated without the opt-in: no autoMerge', async () => {
+			expect(await tick(false, true)).toEqual([
+				{ pr: 10, issue: 1, notes: false, autoMerge: false },
+			])
+		})
+
+		it('release-gated with the opt-in: autoMerge', async () => {
+			expect(await tick(true, true)).toEqual([{ pr: 10, issue: 1, notes: false, autoMerge: true }])
+		})
+
+		it('opt-in but not release-gated: no autoMerge', async () => {
+			expect(await tick(true, false)).toEqual([
+				{ pr: 10, issue: 1, notes: false, autoMerge: false },
+			])
+		})
 	})
 
 	it('adopts any unlabelled agentUser PR, header or not (#115)', async () => {
