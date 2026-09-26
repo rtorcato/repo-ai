@@ -11,6 +11,7 @@ import { checkLoopLabels } from '../../base/labels.js'
 import { releaseGated } from '../../base/release-gate.js'
 import { checkStatusline } from '../../base/statusline.js'
 import type { CheckResult } from '../../base/types.js'
+import { ghOut } from './loop-env.js'
 
 /**
  * The loop's own audit — the four checks that used to ride along in
@@ -57,8 +58,18 @@ export async function checkAutoMerge(
 	}
 	// No .git → never spawn gh (keeps tmp-dir doctor runs offline).
 	const gh: GhExec = exec ?? ((args, stdin) => realGhExec(args, stdin, dir))
-	const gated =
-		(await fs.pathExists(path.join(dir, '.git'))) && (await releaseGated(gh, '{owner}/{repo}', dir))
+	let gated = false
+	if (await fs.pathExists(path.join(dir, '.git'))) {
+		const nwo = await ghOut(gh, [
+			'repo',
+			'view',
+			'--json',
+			'nameWithOwner',
+			'--jq',
+			'.nameWithOwner',
+		])
+		gated = nwo !== '' && (await releaseGated(gh, nwo, dir))
+	}
 	return gated
 		? { check, status: 'ok', detail: 'on — release-gated, so loop tick may merge passed PRs' }
 		: {

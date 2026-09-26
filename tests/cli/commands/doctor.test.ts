@@ -49,13 +49,19 @@ describe('checkAutoMerge (#142)', () => {
 			join(dir, '.github/workflows/release.yml'),
 			'jobs:\n  release:\n    environment: release\n    steps:\n      - run: npx semantic-release\n'
 		)
-		const r = await checkAutoMerge(dir, true, async () => ({
-			ok: true,
-			stdout: JSON.stringify({
-				environments: [{ name: 'release', protection_rules: [{ type: 'required_reviewers' }] }],
-			}),
-			stderr: '',
-		}))
+		const r = await checkAutoMerge(dir, true, async (args) => {
+			if (args[0] === 'repo') return { ok: true, stdout: 'acme/widget\n', stderr: '' }
+			// A literal '{owner}/{repo}' here would mean the name was never resolved.
+			if (args[1] !== 'repos/acme/widget/environments')
+				return { ok: false, stdout: '', stderr: '404' }
+			return {
+				ok: true,
+				stdout: JSON.stringify({
+					environments: [{ name: 'release', protection_rules: [{ type: 'required_reviewers' }] }],
+				}),
+				stderr: '',
+			}
+		})
 		expect(r).toMatchObject({ status: 'ok', detail: expect.stringMatching(/^on/) })
 	})
 })
