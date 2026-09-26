@@ -484,6 +484,29 @@ loop, or just remove the `ai-ready` labels — the loop then idles harmlessly.
 On a new repo, start with one trivial `ai-ready` issue and watch the first few
 ticks before leaving the loop alone.
 
+### Dependent PRs outside the loop
+
+When issue B needs A's unmerged work, stack B on A with GitHub's native stacked
+PRs instead of branching B off A and rebasing and retargeting it by hand. That
+manual rebase-and-retarget is what produced a false CI failure on the #88 → #90
+→ #92 chain (#98).
+
+```bash
+gh extension install github/gh-stack
+gh stack --help
+```
+
+A stack is an ordered series of PRs, each targeting the one below it. Open A's
+PR against `main`, then add B as the next layer of the stack, so B's PR targets
+A's branch and its diff shows only B's own changes. When A merges, GitHub
+rebases B and retargets it onto `main` itself; nothing needs retargeting by
+hand. Branch protection and required checks still apply to every layer. Merge
+the layers bottom-up, one at a time, and note in B's PR that it depends on A.
+
+Stacked PRs are in public preview, and merge queue support is still rolling out.
+The loop itself doesn't stack: Pass 4 still makes an issue that overlaps a
+picked one wait its turn.
+
 ## Safety
 
 The `ai-ready` label is the hard gate: on a public repo only collaborators can
