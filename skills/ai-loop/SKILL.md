@@ -119,8 +119,13 @@ PR: ai-review ─> ai-reviewing-* ─┬─> ai-ok-code + ai-ok-sec ──> merg
                                      └─ Pass 1 sends back: not CLEAN, or a required check FAILED
 ```
 
-`ai-reviewing-*` and `ai-fixing` are *claims*, applied as each task is queued for
-Pass 3's Workflow and cleared by the agent; one outliving its agent is reaped in Pass 2.
+Pass 4's Workflow drives this whole chain itself for the issue it just picked
+up — reviews, fix rounds and all — so a PR normally reaches Pass 1 already
+passed without Pass 3 touching it. `ai-reviewing-*` and `ai-fixing` are
+*claims*, applied as each task is queued for whichever Workflow runs it —
+Pass 4's, for a PR still inside its own pickup run, or Pass 3's, for
+everything else — and cleared by the agent; one outliving its agent is reaped
+in Pass 2.
 
 ## Limits — do not exceed (the loop runs unattended against a monthly cap)
 
@@ -334,7 +339,15 @@ one also `ai-ready`/`ai-wip`/`holding`:
 gh issue close <N> --comment '🤖 *Automated — `ai-loop` Pass 2.* Unclaimed `ai-suggested` for 30d — closed to keep the triage queue honest. Reopen to revive.'
 ```
 
-### Pass 3 — review and fix
+### Pass 3 — review and fix (recovery)
+
+**Pass 4's Workflow already reviews and fixes its own issues' PRs end to
+end.** Pass 3 only picks up what that Workflow didn't finish: a PR with no
+live pickup Workflow behind it — a dead agent, a session restart, a PR Pass 0
+adopted (no loop worktree ever existed for it), or one Pass 1 sent back after
+`CLEAN` went stale. The mechanics below are unchanged — same claims, same
+8-task cap — this pass just runs less often now that pickup carries fix
+rounds itself.
 
 **Adopt posted verdicts** — `.verdicts[]`: a reviewer that posted and died
 before labelling. `loop verdict` trusts only the loop's own login and the PR's
@@ -543,6 +556,10 @@ Launch it and **do not wait** — go on to Pass 4. Notes, so it doesn't get
   or `loop reap` clears it. Fold `outputTokensSpent` into Pass 5's report.
 
 ### Pass 4 — pick up
+
+**This pass's Workflow owns an issue's whole chain — implement, both
+reviews, and every fix round — so its PRs normally reach Pass 1 already
+passed, without Pass 3 ever touching them.**
 
 `.slots` is `6 − in flight` after cleanup and reaping; `0` → skip. `.pickups[]`
 is every eligible issue in queue order — `ai-ready` (the hard gate), not a PR or
@@ -815,7 +832,11 @@ npx @rtorcato/repo-ai loop watch --root "$ROOT"
 
 It computes the tick's work list every `pollSeconds` (`.repo-ai.json`, default
 180, floor 60) and prints one line only when the actionable part changes — a
-halt once, until it clears. On each line, run a tick. While it runs, Pass 5
+halt once, until it clears. Mostly that means waking the tick for pickup and
+handoff — a new `ai-ready` issue to claim, or a passed PR ready to hand over
+— since pickup's own Workflow already runs an issue's reviews and fix rounds
+without waiting on a poll. Nothing here polls CI with the model; that
+judgement happens inside a tick. On each line, run a tick. While it runs, Pass 5
 keeps the job at the 30-minute fallback cadence. Re-arm it when the Monitor
 expires at 30 minutes — unless no `/ai-loop` job exists (`CronList`): then the
 loop has stopped, quietly or by request, so let the watcher lapse. At the default that is 20 polls an hour, each a few

@@ -278,6 +278,11 @@ PR: ai-review ─> ai-reviewing-* ─┬─> ai-ok-code + ai-ok-sec ─┬─ is
                                      └─ Pass 1 sends back: not CLEAN, or a required check FAILED
 ```
 
+Pass 4's Workflow drives this whole chain itself for the issue it just picked
+up — reviews, fix rounds and all — so a PR normally reaches Pass 1 already
+passed. Pass 3 is the recovery path: it only reviews or fixes a PR with no
+live pickup Workflow behind it.
+
 `ai-reviewing-code` / `ai-reviewing-sec` / `ai-fixing` are the claim step. Pass 3
 applies one as it queues that agent for the tick's Workflow and skips queueing a
 second while it is set, so a tick that fires mid-run cannot double-spawn; the agent
@@ -341,8 +346,8 @@ Passes run cheapest first, so a quiet repo exits fast.
 | **0 — orient** | Resolve the main checkout, fetch, list open PRs and `ai-wip` issues. Adopt unlabelled PRs — Dependabot's, and any the loop's own identity opened with the `🤖` header. Bail to Pass 5 with `idle` only if there is nothing at all: no labelled PR, no eligible issue, and no leftover worktree. |
 | **1 — merge** | Auto-merge only *Dependabot* PRs that passed both reviews. Hand every other ready PR to you as `merge-ready`, dropping `ai-review` and both `ai-ok-*`. Update a `BEHIND` branch with `gh pr update-branch`, keeping the reviews; wait on required checks still pending. Send back anything else GitHub reports as not `CLEAN`, or with a required check red. |
 | **2 — clean up** | Remove worktrees whose PR merged (confirming the squash is on `main` first), then reap stalls. |
-| **3 — review** | Queue the missing reviewers for `ai-review` PRs and a fix round for each `ai-changes` PR, then run them all in one Workflow (at most 8 agents) with typed verdicts. The agents still write the labels and verdict markers. |
-| **4 — pick up** | Claim eligible `ai-ready` issues, create the worktrees, and run one Workflow: an implementer per issue, then two reviewers per PR. |
+| **3 — review (recovery)** | Queue reviews and fix rounds only for PRs with no live pickup Workflow behind them — a dead agent, a restart, a PR Pass 0 adopted, or one Pass 1 sent back — then run them all in one Workflow (at most 8 agents) with typed verdicts. The agents still write the labels and verdict markers. |
+| **4 — pick up** | Claim eligible `ai-ready` issues, create the worktrees, and run one Workflow that owns each issue's whole chain — implement, both reviews, and every fix round — so its PRs normally reach Pass 1 already passed, without Pass 3. |
 | **5 — report** | One-line summary, notify only when it changed. Never skipped, including on an idle tick. |
 
 Three details worth knowing because they fail *silently* when got wrong:
@@ -427,7 +432,12 @@ adding a second one.
 more tokens. `loop watch` polls without the LLM: every `pollSeconds` it computes
 the tick's work list and prints one line only when the actionable part changes:
 the local time, the tick summary, then each non-empty category by PR or issue
-number.
+number. Mostly that means waking the tick for pickup and handoff — a new
+`ai-ready` issue to claim, or a passed PR ready to hand over — since pickup's
+own Workflow already runs an issue's reviews and fix rounds without waiting on
+a poll; `review` and `fix` still show up when Pass 3's recovery path has
+something to do. Nothing here polls CI with the model; that judgement happens
+inside a tick.
 
 ```
 15:42  5wip·1rev  review #78 · fix #69 · update #74 · handoff #74 · pickup #39 #41 · cleaned #62 · stalled #55
