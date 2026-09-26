@@ -19,10 +19,13 @@ import { isNewerVersion, resolveShippedVersion } from '../utils/version.js'
 import { type SkillContentState, VERSION_KEY, HASH_KEY } from './claude-skills.js'
 
 /** Each is `workflows/<name>.js` here, and runs as `Workflow({name})`. */
-export const SHIPPED_WORKFLOWS = ['ai-loop-pickup', 'ai-loop-pass3']
+export const SHIPPED_WORKFLOWS = ['ai-loop-pickup', 'ai-loop-recover']
 
-/** Scripts earlier releases shipped — `ai-workflow` is `ai-loop-pickup` since #87. */
-export const RETIRED_WORKFLOWS = ['ai-workflow']
+/**
+ * Scripts earlier releases shipped — `ai-workflow` is `ai-loop-pickup` since
+ * #87, and `ai-loop-pass3` is `ai-loop-recover` since #144.
+ */
+export const RETIRED_WORKFLOWS = ['ai-workflow', 'ai-loop-pass3']
 
 const STAMP_LINE = new RegExp(`^// (?:${VERSION_KEY}|${HASH_KEY}): .*\\n?`, 'gm')
 

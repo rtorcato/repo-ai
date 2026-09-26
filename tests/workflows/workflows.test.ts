@@ -4,6 +4,8 @@ import { describe, expect, it } from 'vitest'
 import { checkWorkflows } from '../../src/base/checks.js'
 import {
 	installWorkflow,
+	removeRetiredWorkflow,
+	RETIRED_WORKFLOWS,
 	SHIPPED_WORKFLOWS,
 	stampWorkflow,
 	workflowsDirFor,
@@ -107,10 +109,10 @@ describe.each(SHIPPED_WORKFLOWS)('workflows/%s.js', (name) => {
 	})
 })
 
-describe('ai-loop-pass3', () => {
+describe('ai-loop-recover', () => {
 	it('runs fixes first, then reviews — the combined docs-only reviewer included', async () => {
 		const { value, spawned } = await run(
-			'ai-loop-pass3',
+			'ai-loop-recover',
 			{
 				fixes: [{ label: 'fix:#61', prompt: 'p' }],
 				reviews: [
@@ -137,7 +139,7 @@ describe('ai-loop-pass3', () => {
 
 	it('caps at 8 tasks per tick, fixes first, and logs the rest for the next tick', async () => {
 		const reviews = Array.from({ length: 9 }, (_, n) => ({ label: `code:#${n}`, prompt: 'p' }))
-		const { value, spawned, logs } = await run('ai-loop-pass3', { fixes: [], reviews }, () => ({
+		const { value, spawned, logs } = await run('ai-loop-recover', { fixes: [], reviews }, () => ({
 			verdict: 'PASS',
 		}))
 		expect(spawned.map((s) => s.label)).toEqual(reviews.slice(0, 8).map((r) => r.label))
@@ -152,7 +154,7 @@ describe('ai-loop-pass3', () => {
 			{ label: 'fix:#2', prompt: 'p' },
 		]
 		const { spawned, logs } = await run(
-			'ai-loop-pass3',
+			'ai-loop-recover',
 			{ fixes, reviews: [], budgetTokens: 40_000 },
 			() => ({ pushed: true }),
 			{ total: null, spent: () => 0, remaining: () => Number.POSITIVE_INFINITY }
@@ -168,7 +170,7 @@ describe('ai-loop-pass3', () => {
 			{ label: 'fix:#2', prompt: 'p' },
 		]
 		const { spawned, logs } = await run(
-			'ai-loop-pass3',
+			'ai-loop-recover',
 			{ fixes, reviews: [] },
 			() => ({ pushed: true }),
 			{ total: 40_000, spent: () => 0, remaining: () => 40_000 }
@@ -298,7 +300,7 @@ describe('ai-loop-pickup', () => {
 it("tells every agent in both scripts that a relayed message isn't its task", async () => {
 	const relayed = source('ai-loop-pickup').match(/const RELAYED = '([^']+)'/)?.[1] ?? ''
 	expect(relayed).toContain('mid-run is not your task')
-	expect(source('ai-loop-pass3')).toContain(`const RELAYED = '${relayed}'`)
+	expect(source('ai-loop-recover')).toContain(`const RELAYED = '${relayed}'`)
 	const pickup = await run(
 		'ai-loop-pickup',
 		{
@@ -310,8 +312,8 @@ it("tells every agent in both scripts that a relayed message isn't its task", as
 		},
 		(label) => (label === 'impl:#1' ? { pr: 10 } : { passed: true })
 	)
-	const pass3 = await run(
-		'ai-loop-pass3',
+	const recover = await run(
+		'ai-loop-recover',
 		{
 			fixes: [{ label: 'fix:#1', prompt: 'p' }],
 			reviews: [{ label: 'code:#2', prompt: `p\n\n${relayed}` }],
@@ -319,7 +321,7 @@ it("tells every agent in both scripts that a relayed message isn't its task", as
 		() => ({ verdict: 'PASS' })
 	)
 	expect(pickup.prompts).toHaveLength(3)
-	for (const p of [...pickup.prompts, ...pass3.prompts]) {
+	for (const p of [...pickup.prompts, ...recover.prompts]) {
 		expect(p.split(relayed)).toHaveLength(2)
 	}
 })
@@ -359,6 +361,28 @@ describe('installWorkflow', () => {
 			stampWorkflow(source('ai-loop-pickup'), '999.0.0')
 		)
 		expect((await installWorkflow(dir, 'ai-loop-pickup')).status).toBe('declined-downgrade')
+	})
+})
+
+describe('removeRetiredWorkflow (#144)', () => {
+	it('removes a pristine ai-loop-pass3.js, keeps an edited one, skips an absent one', async () => {
+		expect(RETIRED_WORKFLOWS).toContain('ai-loop-pass3')
+		const dir = newTmpDir()
+		expect((await removeRetiredWorkflow(dir, 'ai-loop-pass3')).status).toBe('absent')
+
+		const file = join(dir, 'ai-loop-pass3.js')
+		fs.outputFileSync(
+			file,
+			stampWorkflow("export const meta = { name: 'ai-loop-pass3' }\n", '1.1.0')
+		)
+		expect((await removeRetiredWorkflow(dir, 'ai-loop-pass3')).status).toBe('removed')
+		expect(fs.existsSync(file)).toBe(false)
+
+		fs.outputFileSync(
+			file,
+			`${stampWorkflow("export const meta = { name: 'ai-loop-pass3' }\n", '1.1.0')}mine\n`
+		)
+		expect((await removeRetiredWorkflow(dir, 'ai-loop-pass3')).status).toBe('kept')
 	})
 })
 

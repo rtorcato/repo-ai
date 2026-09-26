@@ -523,10 +523,10 @@ unclaimed for the next tick, which lists them again. A claim with no task behind
 it would sit until `loop reap` times it out.
 
 ```
-Workflow({name: 'ai-loop-pass3', args: {reviews: [{label, agentType, prompt}, …], fixes: [{label, prompt}, …], budgetTokens: BUDGET_TOKENS}})
+Workflow({name: 'ai-loop-recover', args: {reviews: [{label, agentType, prompt}, …], fixes: [{label, prompt}, …], budgetTokens: BUDGET_TOKENS}})
 ```
 
-The script is `workflows/ai-loop-pass3.js` in this package, installed to
+The script is `workflows/ai-loop-recover.js` in this package, installed to
 `~/.claude/workflows/` by `fix claude-skills` alongside this skill. Run it by name;
 if `Workflow` reports no workflow by that name, run
 `npx @rtorcato/repo-ai fix claude-skills` and call it again.
@@ -639,7 +639,7 @@ reviewers run as `general-purpose` with the same prompt (#611). Pass
 `agentUser` / `humanUser` as the empty string when unset.
 
 The script is `workflows/ai-loop-pickup.js` in this package, installed beside
-`ai-loop-pass3`; run it by name, and on "no workflow by that name" run
+`ai-loop-recover`; run it by name, and on "no workflow by that name" run
 `npx @rtorcato/repo-ai fix claude-skills` and call it again. Launch it and **do
 not wait** — go on to Pass 5.
 
