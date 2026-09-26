@@ -1,5 +1,5 @@
 export const meta = {
-	name: 'ai-loop-pass3',
+	name: 'ai-loop-recover',
 	description: "Run one tick's claimed reviewers and fixers; each labels and comments its own PR",
 	phases: [{ title: 'Review' }, { title: 'Fix' }],
 }
