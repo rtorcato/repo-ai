@@ -18,8 +18,9 @@ description: |
 
 One **tick** of an unattended pipeline: `ai-ready` issue → worktree → PR → two
 agent reviews → **assigned to you to merge** → worktree removed on the next tick.
-Nothing merges here except, on a repo whose `release` environment requires
-reviewers, a fully-passed issue PR. See Pass 1. Dependabot PRs are outside this
+Nothing merges here except, on a repo that sets `"autoMerge": true` in
+`.repo-ai.json` *and* whose `release` environment requires reviewers, a
+fully-passed issue PR. See Pass 1. Dependabot PRs are outside this
 loop entirely — their own workflow merges them (#593). Whenever the loop declines
 to merge, it says why in a comment on the PR.
 
@@ -223,9 +224,10 @@ wears `ai-review` forever. **Never strip `ai-notes`** — it must survive to the
 merge. A clean handoff gets **no comment**; a `.notes` one gets ≤10 lines through
 `loop comment`, linking the reviewer's `### Before merging`.
 
-**`.autoMerge` is the one unattended merge**: set only when the publishing job
-runs behind an environment with `required_reviewers` (a human still stands
-before npm) and the PR has no `ai-notes`. Unreadable answers fail closed. After
+**`.autoMerge` is the one unattended merge**: set only when `.repo-ai.json`
+opts in with `"autoMerge": true`, the publishing job runs behind an environment
+with `required_reviewers` (a human still stands before npm), and the PR has no
+`ai-notes`. Without the opt-in, a release gate alone never merges. Unreadable answers fail closed. After
 the handoff edit:
 
 ```bash

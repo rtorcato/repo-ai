@@ -82,6 +82,7 @@ optional:
 | `pollSeconds` | integer | `180`; values below `60` are raised to `60` | `loop watch`, between polls. Each poll costs several GitHub API calls against the 5,000/h limit. |
 | `budgetTokens` | integer | `400000`; values below `1000` are ignored | `loop env` (as `BUDGET_TOKENS`), passed to the `ai-loop-pickup` and `ai-loop-pass3` Workflow scripts, which enforce it — an agent past the cap is skipped and `log()`ged, not spawned. It bounds **output tokens only** (the Workflow runtime's `budget.spent()`, reported as `outputTokensSpent`); the harness's per-run total, input and cache reads included, runs several times higher. |
 | `quietStopMinutes` | integer | `120`; `0` disables | `loop env` (as `QUIET_STOP_MINUTES`). A tick that finds the status summary unchanged this long stops the loop — see [Driving it](#driving-it). |
+| `autoMerge` | boolean | `false` | `loop tick`. Lets Pass 1 merge a fully-passed issue PR unattended — only on a repo whose publishing job also runs behind an environment with `required_reviewers`. `doctor` warns when it is on without that gate. |
 
 The schema is [`schemas/repo-ai.json`](https://rtorcato.github.io/repo-ai/repo-ai.json)
 (JSON Schema draft 2020-12), which ships in the npm package too. It sets
@@ -344,7 +345,7 @@ Passes run cheapest first, so a quiet repo exits fast.
 | Pass | Does |
 |---|---|
 | **0 — orient** | Resolve the main checkout, fetch, list open PRs and `ai-wip` issues. Adopt unlabelled PRs — Dependabot's, and any the loop's own identity opened with the `🤖` header. Bail to Pass 5 with `idle` only if there is nothing at all: no labelled PR, no eligible issue, and no leftover worktree. |
-| **1 — merge** | Auto-merge only *Dependabot* PRs that passed both reviews. Hand every other ready PR to you as `merge-ready`, dropping `ai-review` and both `ai-ok-*`. Update a `BEHIND` branch with `gh pr update-branch`, keeping the reviews; wait on required checks still pending. Send back anything else GitHub reports as not `CLEAN`, or with a required check red. |
+| **1 — merge** | Auto-merge only *Dependabot* PRs that passed both reviews, plus fully-passed issue PRs on a repo that sets `"autoMerge": true` in `.repo-ai.json` *and* publishes behind a `release` environment with required reviewers — the release gate alone is not enough. Hand every other ready PR to you as `merge-ready`, dropping `ai-review` and both `ai-ok-*`. Update a `BEHIND` branch with `gh pr update-branch`, keeping the reviews; wait on required checks still pending. Send back anything else GitHub reports as not `CLEAN`, or with a required check red. |
 | **2 — clean up** | Remove worktrees whose PR merged (confirming the squash is on `main` first), then reap stalls. |
 | **3 — review (recovery)** | Queue reviews and fix rounds only for PRs with no live pickup Workflow behind them — a dead agent, a restart, a PR Pass 0 adopted, or one Pass 1 sent back — then run them all in one Workflow (at most 8 agents) with typed verdicts. The agents still write the labels and verdict markers. |
 | **4 — pick up** | Claim eligible `ai-ready` issues, create the worktrees, and run one Workflow that owns each issue's whole chain — implement, both reviews, and every fix round — so its PRs normally reach Pass 1 already passed, without Pass 3. |

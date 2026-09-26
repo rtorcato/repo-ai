@@ -1,13 +1,17 @@
 import os from 'node:os'
 import path from 'node:path'
 import chalk from 'chalk'
+import fs from 'fs-extra'
 import { checkAgentUser } from '../../base/agent-user.js'
 import { checkClaudeSkills, checkRequiredSkills, checkWorkflows } from '../../base/checks.js'
 import { CONFIG_FILE, readConfig } from '../../base/config.js'
 import { checkConfigSchema } from '../../base/config-schema.js'
+import { type GhExec, realGhExec } from '../../base/gh.js'
 import { checkLoopLabels } from '../../base/labels.js'
+import { releaseGated } from '../../base/release-gate.js'
 import { checkStatusline } from '../../base/statusline.js'
 import type { CheckResult } from '../../base/types.js'
+import { ghOut } from './loop-env.js'
 
 /**
  * The loop's own audit — the four checks that used to ride along in
@@ -19,6 +23,7 @@ export async function runDoctor(dir: string, skillsDir?: string): Promise<CheckR
 	const results = [
 		await checkLoopLabels(dir),
 		await checkAgentUser(dir, config.agentUser),
+		await checkAutoMerge(dir, config.autoMerge === true),
 		await checkClaudeSkills(skillsDir),
 		await checkWorkflows(skillsDir),
 		await checkStatusline(os.homedir()),
@@ -39,6 +44,40 @@ export async function runDoctor(dir: string, skillsDir?: string): Promise<CheckR
 		results.push(await checkRequiredSkills(required, skillsDir))
 	}
 	return results
+}
+
+/** `loop tick` merges unattended only with the opt-in *and* a release gate (#142). */
+export async function checkAutoMerge(
+	dir: string,
+	autoMerge: boolean,
+	exec?: GhExec
+): Promise<CheckResult> {
+	const check = 'Unattended merge'
+	if (!autoMerge) {
+		return { check, status: 'ok', detail: `off — no "autoMerge": true in ${CONFIG_FILE}` }
+	}
+	// No .git → never spawn gh (keeps tmp-dir doctor runs offline).
+	const gh: GhExec = exec ?? ((args, stdin) => realGhExec(args, stdin, dir))
+	let gated = false
+	if (await fs.pathExists(path.join(dir, '.git'))) {
+		const nwo = await ghOut(gh, [
+			'repo',
+			'view',
+			'--json',
+			'nameWithOwner',
+			'--jq',
+			'.nameWithOwner',
+		])
+		gated = nwo !== '' && (await releaseGated(gh, nwo, dir))
+	}
+	return gated
+		? { check, status: 'ok', detail: 'on — release-gated, so loop tick may merge passed PRs' }
+		: {
+				check,
+				status: 'drift',
+				detail: 'autoMerge is on but the repo is not release-gated — loop tick will never merge',
+				hint: 'Put the publishing job behind an environment with required_reviewers, or drop autoMerge',
+			}
 }
 
 const ICON: Record<CheckResult['status'], string> = {
