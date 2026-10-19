@@ -69,6 +69,18 @@ test('blocks release commands', () => {
 		'gh workflow run "${WF}"',
 		'gh workflow run -R "$REPO" "$WF"',
 		'gh workflow run $WF && echo done',
+		'gh workflow run $WF 2>&1',
+		'gh workflow run $WF > out.log',
+		'gh workflow run $WF >>out.log 2>&1',
+		'gh workflow run $WF </dev/null',
+		'gh workflow run $WF # go',
+		'gh workflow run $WF -f a="b c"',
+		"gh workflow run -R o/r $WF -f a='b c' 2>&1 # go",
+		'gh workflow run $(cat id)',
+		'gh workflow run "$(cat id)"',
+		'gh workflow run `cat id`',
+		'gh workflow run $(cat id) -f a=b 2>&1',
+		'gh workflow run -f a="b c" release.yml',
 	])
 		expect(blockedBash(cmd)).toBeDefined()
 })
@@ -121,6 +133,12 @@ test('allows everyday commands', () => {
 		'gh workflow run -R "$REPO" ci.yml',
 		'gh workflow run --ref "$BRANCH" ci.yml',
 		'gh workflow run --ref $B ci.yml',
+		'gh workflow run ci.yml 2>&1',
+		'gh workflow run ci.yml -f a="b c"',
+		'gh workflow run -f a="b c" ci.yml',
+		'gh workflow run --ref $(git branch --show-current) ci.yml',
+		'gh workflow run ci.yml -f ref=$(git rev-parse HEAD)',
+		'gh workflow run --ref `git branch --show-current` ci.yml',
 	])
 		expect(blockedBash(cmd)).toBeUndefined()
 })

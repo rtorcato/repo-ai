@@ -7,11 +7,20 @@ const AT = String.raw`(?:^|[;&|(]|\$\()\s*(?:(?:then|do|else)\s+)?(?:(?:env|comm
 // `git -C <dir>` / `git -c k=v` before the subcommand, as worktree agents write it.
 const GIT = String.raw`git(?:\s+-[Cc]\s+\S+)*\s+`
 const rule = (body: string, flags = '') => new RegExp(AT + body, `m${flags}`)
+// A flag value: plain characters and quoted strings (`a="b c"`), never starting with `-`. The three
+// pieces share no characters, so each token parses one way only.
+const VALUE = String.raw`(?:[^-\s"']|"[^"]*"|'[^']*')(?:[^\s"']|"[^"]*"|'[^']*')*`
 // `gh workflow run` flags, with or without a value, before the workflow name or file. The flag name
 // stops at `=` and a value can't start with `-`, so each token parses one way only: no backtracking blowup.
-const RUN = String.raw`gh\s+workflow\s+run\s+(?:-[^\s=]+(?:[\s=][^-\s]\S*)?\s+)*`
-// Only flags until the command ends, so a `$var` counts as the workflow only when it is the last positional.
-const FLAGS = String.raw`(?:\s+-[^\s=]+(?:[\s=][^-\s]\S*)?)*\s*(?:$|[;&|)])`
+const FLAG = String.raw`-[^\s=]+(?:[\s=]${VALUE})?`
+const RUN = String.raw`gh\s+workflow\s+run\s+(?:${FLAG}\s+)*`
+// A redirection (`2>&1`, `> out.log`, `</dev/null`) can sit between the arguments or after them.
+const REDIR = String.raw`\d*[<>]+&?\s*[^\s;&|)]+`
+// Only flags, redirections and a trailing `# comment` until the command ends, so a `$var` counts as the
+// workflow only when it is the last positional.
+const FLAGS = String.raw`(?:\s+(?:${FLAG}|${REDIR}))*(?:\s+#.*)?\s*(?:$|[;&|)])`
+// What can't be resolved offline: a `$var`, a `$(…)` or a backtick substitution, optionally quoted.
+const DYNAMIC = String.raw`["']?(?:\$\([^)]*\)|\$[^\s;&|)]*|\x60[^\x60]*\x60)["']?`
 
 const RULES: [RegExp, string][] = [
 	[rule(String.raw`(npm|pnpm|yarn|bun)\b[^\n;&|]*\spublish(?![\w-])`), 'publishing to npm'],
@@ -56,7 +65,7 @@ const RULES: [RegExp, string][] = [
 	],
 	// A numeric workflow ID, or a `$var` holding one, can't be resolved offline, so any one might be release.yml.
 	[
-		rule(RUN + String.raw`["']?(?:\d+["']?(?![^\s;&|)])|\$[^\s;&|)]*` + FLAGS + ')'),
+		rule(RUN + String.raw`(?:["']?\d+["']?(?![^\s;&|)])|${DYNAMIC}${FLAGS})`),
 		'dispatching a workflow by numeric ID or variable (it may be the release workflow)',
 	],
 	[
