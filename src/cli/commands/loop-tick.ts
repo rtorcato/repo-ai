@@ -890,7 +890,10 @@ export async function runLoopTick(options: LoopTickOptions = {}): Promise<LoopTi
 	const cutoff = now - DECAY_DAYS * 86_400_000
 	result.decay = (suggested ?? [])
 		// A promoted suggestion keeps its label; closing a queued one is unrecoverable.
-		.filter((i) => !i.labels.some((l) => ['ai-ready', 'ai-wip', 'holding'].includes(l.name)))
+		// A security finding must never close itself by going quiet.
+		.filter(
+			(i) => !i.labels.some((l) => ['ai-ready', 'ai-wip', 'holding', 'security'].includes(l.name))
+		)
 		.filter((i) => Date.parse(i.updatedAt) < cutoff)
 		.map((i) => i.number)
 

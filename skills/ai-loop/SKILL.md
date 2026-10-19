@@ -46,6 +46,7 @@ gh label create ai-fixing  -c '#006b75' -d 'Fix-round implementer claimed and ru
 gh label create ai-notes   -c '#fbca04' -d 'Passed, but a reviewer left something to read before merging'
 gh label create merge-ready -c '#8250df' -d 'Both agent reviews passed and the PR is mergeable — waiting on a human'
 gh label create ai-suggested -c '#c2e0c6' -d 'Follow-up surfaced by an agent review — triage queue, never auto-picked'
+gh label create security -c '#ee0701' -d 'Security finding — never auto-closed'
 ```
 
 Also once per repo: `grep -qxF '.claude/ai-loop-status' '<root>/.gitignore' || echo '.claude/ai-loop-status' >> '<root>/.gitignore'`.

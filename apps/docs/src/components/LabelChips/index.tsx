@@ -6,7 +6,14 @@ import styles from './styles.module.css'
 const BY_NAME = new Map(LOOP_LABELS.map((l) => [l.name, l]))
 
 // Labels that live on issues; everything else is on PRs.
-const ISSUE_LABELS = new Set(['ai-ready', 'ai-wip', 'ai-blocked', 'holding', 'ai-suggested'])
+const ISSUE_LABELS = new Set([
+	'ai-ready',
+	'ai-wip',
+	'ai-blocked',
+	'holding',
+	'ai-suggested',
+	'security',
+])
 
 /** GitHub's rule of thumb: dark text on light fills, white on dark ones. */
 function ink(hex: string): string {

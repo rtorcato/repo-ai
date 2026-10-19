@@ -439,6 +439,11 @@ describe('runLoopTick', () => {
 						updatedAt: daysAgo(40),
 						labels: [{ name: 'ai-suggested' }, { name: 'ai-ready' }],
 					},
+					{
+						number: 33,
+						updatedAt: daysAgo(40),
+						labels: [{ name: 'ai-suggested' }, { name: 'security' }],
+					},
 				],
 				queue: [
 					{ number: 40, title: 'ok', body: 'b', labels: [], author_association: 'OWNER' },

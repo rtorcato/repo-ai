@@ -50,4 +50,9 @@ export const LOOP_LABELS: readonly LabelSpec[] = [
 		color: 'c2e0c6',
 		description: 'Follow-up surfaced by an agent review — triage queue, never auto-picked',
 	},
+	{
+		name: 'security',
+		color: 'ee0701',
+		description: 'Security finding — never auto-closed',
+	},
 ]
