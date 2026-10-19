@@ -41,7 +41,7 @@ describe('detectPackageManager (#360)', () => {
 describe('installCommand', () => {
 	it.each([
 		[{ 'pnpm-lock.yaml': '' }, "pnpm -C '<worktree>' install --ignore-scripts --ignore-pnpmfile"],
-		[{ 'bun.lock': '' }, "bun install --cwd '<worktree>'"],
+		[{ 'bun.lock': '' }, "bun install --cwd '<worktree>' --ignore-scripts"],
 		[{ 'package-lock.json': '{}' }, "npm --prefix '<worktree>' install --ignore-scripts"],
 		[{ 'yarn.lock': '' }, "yarn --cwd '<worktree>' install --ignore-scripts"],
 		[

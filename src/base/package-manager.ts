@@ -31,8 +31,9 @@ export async function detectPackageManager(dir: string): Promise<PackageManager 
  * commands start with a plain executable (#150) — never `cd … &&`.
  *
  * None runs dependency lifecycle scripts (#382): a stacked pickup installs an
- * unmerged agent branch's lockfile on the loop host. bun skips them by default;
- * npm and yarn need the flag. pnpm needs it too, since the branch's
+ * unmerged agent branch's lockfile on the loop host. npm and yarn need the flag.
+ * bun skips them by default, but runs them for any package in the branch's
+ * `trustedDependencies`, so it needs the flag too (#398). pnpm needs it too, since the branch's
  * `allowBuilds`/`onlyBuiltDependencies` re-enable them, plus `--ignore-pnpmfile`,
  * or it runs the branch's `.pnpmfile.cjs` (#395).
  */
@@ -40,7 +41,7 @@ export const INSTALL_COMMANDS: Record<PackageManager, string> = {
 	pnpm: "pnpm -C '<worktree>' install --ignore-scripts --ignore-pnpmfile",
 	npm: "npm --prefix '<worktree>' install --ignore-scripts",
 	yarn: "yarn --cwd '<worktree>' install --ignore-scripts",
-	bun: "bun install --cwd '<worktree>'",
+	bun: "bun install --cwd '<worktree>' --ignore-scripts",
 }
 
 /** Yarn 2+ shares `yarn.lock` but rejects `--ignore-scripts`; `--mode=skip-build` is its equivalent. */
