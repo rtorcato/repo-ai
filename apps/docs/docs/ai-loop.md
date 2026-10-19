@@ -243,7 +243,8 @@ Hover a chip for its description. The colours come from the same table `doctor` 
 | `ai-fixing` | PR | Fix-round implementer claimed and running. Cleared with its push. |
 | `ai-notes` | PR | Passed, but a reviewer left something to read before merging. |
 | `merge-ready` | PR | Both agent reviews passed and the PR is mergeable — waiting on a human. Supersedes the `ai-ok-*` pair rather than joining it. |
-| `ai-suggested` | issue | A follow-up a reviewer filed. A triage queue: never picked up automatically. Add `ai-ready` to queue it; closed after 30 days untouched. |
+| `ai-suggested` | issue | A follow-up a reviewer filed. A triage queue: never picked up automatically. Add `ai-ready` to queue it; closed after 30 days untouched, unless it also carries `security`. |
+| `security` | issue | A security finding. Marks the issue and exempts it from the 30-day `ai-suggested` decay, so an unfixed finding never closes itself. |
 
 ### What you'll see on a PR
 
