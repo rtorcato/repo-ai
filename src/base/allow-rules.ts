@@ -32,15 +32,27 @@ export async function loopAllowRules(dir: string): Promise<string[]> {
  * Deny rules written alongside the allow rules (#373). `Bash(git *)` and `Bash(<pm>:*)`
  * would otherwise grant `git -c alias.x='!<cmd>' x`, `git -c core.sshCommand=<cmd>`,
  * `pnpm dlx <any package>` and the like, which is arbitrary shell. Deny beats allow.
- * ponytail: prefix rules, so `git -C <dir> -c …` and `pnpm --filter x exec` still get past.
- * A `git -C * -c *` rule would also deny every commit whose message has " -c " in it,
- * because Claude Code's `*` spans spaces.
+ * #404 adds the other git forms that run a command: `submodule foreach`, `rebase`
+ * (`-x`/`--exec`; the loop never rebases), `bisect run`, `difftool`, `filter-branch`,
+ * and `--upload-pack`/`--receive-pack` on fetch, ls-remote and push.
+ * ponytail: prefix rules, so `git -C <dir> -c …` still gets past. A `git -C * -c *` rule
+ * would also deny every commit whose message has " -c " in it, because Claude Code's `*`
+ * spans spaces; the same goes for a commit message that mentions `--upload-pack`.
+ * A denylist can't be complete (git accepts abbreviated long options): narrow the
+ * allow rule to the subcommands the skills run if that matters.
  */
 export const LOOP_DENY_RULES = [
 	'Bash(git -c *)',
 	'Bash(git config *)',
 	'Bash(git --config-env*)',
 	'Bash(git --exec-path*)',
+	'Bash(git submodule foreach*)',
+	'Bash(git rebase*)',
+	'Bash(git bisect run*)',
+	'Bash(git difftool*)',
+	'Bash(git filter-branch*)',
+	'Bash(git * --upload-pack*)',
+	'Bash(git * --receive-pack*)',
 ]
 
 /** The subcommands that run a package the lockfile didn't install, or an arbitrary command. */
@@ -48,13 +60,22 @@ const PM_RUNNERS: Record<PackageManager, string[]> = {
 	pnpm: ['dlx', 'exec', 'create'],
 	npm: ['exec', 'x', 'create', 'init'],
 	yarn: ['dlx', 'exec', 'create'],
-	bun: ['x', 'exec', 'create'],
+	bun: ['x', 'exec', 'create', '-e', '--eval'],
 }
 
-/** {@link LOOP_DENY_RULES} plus the lockfile's package manager's runners, if any. */
+/**
+ * {@link LOOP_DENY_RULES} plus the lockfile's package manager's runners, if any. Each runner
+ * is denied bare and after an option (`pnpm -C <dir> dlx`, `pnpm --filter x exec`, #404);
+ * the loop's own `pnpm -C <worktree> install` has no runner after the option, so it still runs.
+ */
 export async function loopDenyRules(dir: string): Promise<string[]> {
 	const pm = await detectPackageManager(dir)
-	return [...LOOP_DENY_RULES, ...(pm ? PM_RUNNERS[pm].map((sub) => `Bash(${pm} ${sub} *)`) : [])]
+	return [
+		...LOOP_DENY_RULES,
+		...(pm
+			? PM_RUNNERS[pm].flatMap((sub) => [`Bash(${pm} ${sub} *)`, `Bash(${pm} -* ${sub} *)`])
+			: []),
+	]
 }
 
 /** `Bash(gh:*)` and `Bash(gh *)` are the same prefix rule. */
