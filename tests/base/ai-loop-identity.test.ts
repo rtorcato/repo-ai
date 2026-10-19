@@ -84,4 +84,19 @@ describe('setupAgentIdentity', () => {
 		expect(err.code).toBe('settings-local-symlink')
 		expect(fs.readJsonSync(target)).toEqual({})
 	})
+
+	it('refuses to write through a symlinked .gitignore (#404)', async () => {
+		const dir = repo('some-bot')
+		const target = join(newTmpDir(), 'elsewhere')
+		fs.writeFileSync(target, 'keep\n')
+		fs.symlinkSync(target, join(dir, '.gitignore'))
+		const err = await setupAgentIdentity(dir, {
+			home: newTmpDir(),
+			ghConfigDir: newTmpDir(),
+			gh: ghAs('some-bot'),
+		}).catch((e) => e)
+		expect(err).toBeInstanceOf(FixerAbort)
+		expect(err.code).toBe('settings-local-symlink')
+		expect(fs.readFileSync(target, 'utf-8')).toBe('keep\n')
+	})
 })
