@@ -27,6 +27,10 @@ overrides:
   # Dependabot alerts #12-14 (#343): transitive via conventional-changelog-writer
   # (semantic-release), locked at 4.7.9.
   handlebars: '^4.7.10'
+  # GHSA-ch52-4w7c-c8xp (#419): transitive via Docusaurus's update-notifier, locked at 4.2.0.
+  # braces (GHSA-vfj7-8cjw-p6xm) has no override yet: the advisory names >=3.0.4, but the
+  # registry's newest is 3.0.3, so a '^3.0.4' range cannot install.
+  http-cache-semantics: '^4.2.1'
 
 # Don't re-verify node_modules on every script run — the check costs a
 # second per invocation and CI installs with --frozen-lockfile anyway.
