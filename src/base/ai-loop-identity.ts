@@ -87,12 +87,12 @@ export async function setupAgentIdentity(
 }
 
 /**
- * Refuse to write through a symlinked `.claude` or `.claude/settings.local.json` (#373).
- * A repo can commit either one, and `fs.outputJson` would follow it and turn a "this
+ * Refuse to write through a symlinked `.claude`, `.claude/settings.local.json` or
+ * `.gitignore` (#373, #404). A repo can commit any of them, and `fs.outputJson` would follow it and turn a "this
  * checkout only" write into a write somewhere else.
  */
 export async function assertNotSymlinked(targetDir: string): Promise<void> {
-	for (const rel of ['.claude', SETTINGS_LOCAL]) {
+	for (const rel of ['.claude', SETTINGS_LOCAL, '.gitignore']) {
 		const stat = await fs.lstat(path.join(targetDir, rel)).catch(() => null)
 		if (stat?.isSymbolicLink()) {
 			throw new FixerAbort(
@@ -119,6 +119,7 @@ export async function ensureIgnored(targetDir: string): Promise<boolean> {
 	const file = path.join(targetDir, '.gitignore')
 	const existing = (await fs.pathExists(file)) ? await fs.readFile(file, 'utf-8') : ''
 	if (existing.split('\n').some((l) => IGNORE_LINES.has(l.trim()))) return false
+	await assertNotSymlinked(targetDir)
 	const separator = existing === '' || existing.endsWith('\n') ? '' : '\n'
 	await fs.writeFile(file, `${existing}${separator}${SETTINGS_LOCAL}\n`)
 	return true

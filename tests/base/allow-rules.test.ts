@@ -87,9 +87,31 @@ describe('checkAllowRules (#152)', () => {
 		expect(await loopDenyRules(dir)).toEqual([
 			...LOOP_DENY_RULES,
 			'Bash(pnpm dlx *)',
+			'Bash(pnpm -* dlx *)',
 			'Bash(pnpm exec *)',
+			'Bash(pnpm -* exec *)',
 			'Bash(pnpm create *)',
+			'Bash(pnpm -* create *)',
 		])
+		fs.removeSync(join(dir, 'pnpm-lock.yaml'))
+		fs.outputFileSync(join(dir, 'bun.lock'), '')
+		expect(await loopDenyRules(dir)).toEqual(
+			expect.arrayContaining(['Bash(bun -e *)', 'Bash(bun --eval *)'])
+		)
+	})
+
+	it('denies the remaining git commands that run a command (#404)', () => {
+		expect(LOOP_DENY_RULES).toEqual(
+			expect.arrayContaining([
+				'Bash(git submodule foreach*)',
+				'Bash(git rebase*)',
+				'Bash(git bisect run*)',
+				'Bash(git difftool*)',
+				'Bash(git filter-branch*)',
+				'Bash(git * --upload-pack*)',
+				'Bash(git * --receive-pack*)',
+			])
+		)
 	})
 
 	it('treats a bare Bash rule as allowing everything', async () => {
