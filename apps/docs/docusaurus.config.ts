@@ -1,6 +1,6 @@
 import type * as Preset from '@docusaurus/preset-classic'
 import type { Config } from '@docusaurus/types'
-import { copyright, GITHUB_PROFILE, projectFamilyItems } from '@rtorcato/shared-docs'
+import { footerCopyright, GITHUB_PROFILE, projectFamilyItems } from '@rtorcato/shared-docs'
 import { themes as prismThemes } from 'prism-react-renderer'
 
 // The @rtorcato family, from the shared single source of truth — a navbar
@@ -61,6 +61,9 @@ const config: Config = {
 	themes: ['@docusaurus/theme-mermaid'],
 
 	plugins: [
+		// `torcato.dev /` navbar breadcrumb + `← torcato.dev` drawer row. The footer
+		// row comes from footerCopyright() below.
+		'@rtorcato/shared-docs/docusaurus',
 		[
 			'@easyops-cn/docusaurus-search-local',
 			{
@@ -140,7 +143,7 @@ const config: Config = {
 					],
 				},
 			],
-			copyright: copyright(),
+			copyright: footerCopyright(),
 		},
 		// `theme` is the LIGHT-mode Prism theme and `darkTheme` the dark one. Both
 		// were vsDark here, which is why the shared stylesheet had to pin fenced
