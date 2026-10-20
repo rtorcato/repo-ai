@@ -1,6 +1,7 @@
 import Link from '@docusaurus/Link'
 import useBaseUrl from '@docusaurus/useBaseUrl'
 import Siblings from '@rtorcato/shared-docs/components/Siblings'
+import UseWithAI from '@rtorcato/shared-docs/components/UseWithAI'
 import CodeBlock from '@theme/CodeBlock'
 import Layout from '@theme/Layout'
 import TabItem from '@theme/TabItem'
@@ -277,6 +278,12 @@ export default function Home(): ReactElement {
 		>
 			<main>
 				<Hero />
+				<UseWithAI
+					repo="rtorcato/repo-ai"
+					plugin="repo-ai"
+					skill="ai-loop"
+					pkg="@rtorcato/repo-ai"
+				/>
 				<Pillars />
 				<Parts />
 				<Siblings self="@rtorcato/repo-ai" />
