@@ -72,6 +72,8 @@ export function unsetDefaults(value: Record<string, unknown>): Record<string, un
 	return Object.fromEntries(
 		Object.entries(schema.properties)
 			.filter(([key, prop]) => prop.default !== undefined && !(key in value))
+			// A repo with no CI on purpose (#405) has no workflow to name.
+			.filter(([key]) => !(key === 'ciWorkflow' && value.ci === false))
 			.map(([key, prop]) => [key, prop.default])
 	)
 }

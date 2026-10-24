@@ -1,6 +1,6 @@
 import { join } from 'node:path'
 import fs from 'fs-extra'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
 	checkAgentInstructions,
 	checkAutoMerge,
@@ -267,6 +267,21 @@ describe('checkCiRuns (#153)', () => {
 		})
 		expect(paths).toEqual(['repos/acme/widget/actions/workflows/build.yml'])
 		expect(r).toMatchObject({ status: 'drift', detail: expect.stringContaining('build.yml') })
+	})
+
+	it('skips without calling gh when the repo opts out with ci: false (#405)', async () => {
+		const dir = newTmpDir()
+		fs.ensureDirSync(join(dir, '.git'))
+		fs.outputJsonSync(join(dir, '.repo-ai.json'), { ci: false })
+		const gh = vi.fn(async () => ({
+			ok: false,
+			stdout: '',
+			stderr: 'gh: Not Found (HTTP 404)',
+			code: 1,
+		}))
+		const r = await checkCiRuns(dir, gh)
+		expect(gh).not.toHaveBeenCalled()
+		expect(r).toMatchObject({ status: 'ok', detail: expect.stringContaining('ci: false') })
 	})
 })
 

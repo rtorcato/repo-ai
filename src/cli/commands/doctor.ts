@@ -226,12 +226,16 @@ export async function checkCiRuns(
 	if (!(await fs.pathExists(path.join(dir, '.git')))) {
 		return { check, status: 'ok', detail: 'skipped — not a git repository' }
 	}
+	const config = await readConfig(dir)
+	if (config.ci === false) {
+		return { check, status: 'ok', detail: `skipped — \`ci: false\` in ${CONFIG_FILE}` }
+	}
 	const gh: GhExec = exec ?? ((args, stdin) => realGhExec(args, stdin, dir))
 	const [nwo, branch] = await repoAndDefaultBranch(gh)
 	if (!nwo || !branch) {
 		return { check, status: 'ok', detail: 'skipped — could not resolve the GitHub repo' }
 	}
-	const workflow = (await readConfig(dir)).ciWorkflow ?? DEFAULT_CI_WORKFLOW
+	const workflow = config.ciWorkflow ?? DEFAULT_CI_WORKFLOW
 	// #201: a misnamed workflow 404s every probe, which reads as "healthy".
 	const probe = await gh(['api', `repos/${nwo}/actions/workflows/${encodeURIComponent(workflow)}`])
 	if (!probe.ok && /HTTP 404/.test(probe.stderr)) {
@@ -239,7 +243,7 @@ export async function checkCiRuns(
 			check,
 			status: 'drift',
 			detail: `CI workflow ${workflow} not found in ${nwo}`,
-			hint: `Set \`ciWorkflow\` in ${CONFIG_FILE} to the file name of the workflow that runs on pushes to ${branch}`,
+			hint: `Set \`ciWorkflow\` in ${CONFIG_FILE} to the file name of the workflow that runs on pushes to ${branch}, or \`"ci": false\` if the repo has no CI on purpose`,
 		}
 	}
 	const warning = await ciRunWarning(gh, nwo, branch, now, workflow)
