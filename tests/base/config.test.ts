@@ -78,6 +78,18 @@ describe('readConfig', () => {
 	})
 
 	// #388: these reach shell text and API paths unescaped.
+	it('reads ci only when it is false (#405)', async () => {
+		const dir = newTmpDir()
+		for (const [value, want] of [
+			[false, false],
+			[true, undefined],
+			['no', undefined],
+		] as const) {
+			fs.outputJsonSync(join(dir, '.repo-ai.json'), { ci: value })
+			expect((await readConfig(dir)).ci).toBe(want)
+		}
+	})
+
 	it('ignores an agentUser, humanUser or ciWorkflow that is not a login or workflow file', async () => {
 		const dir = newTmpDir()
 		const read = async (value: string) => {

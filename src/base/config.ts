@@ -41,6 +41,8 @@ export interface RepoAiConfig {
 	maxAgents?: number
 	/** The CI workflow file the `main` run probes watch (#201); unset means `ci.yml`. */
 	ciWorkflow?: string
+	/** `false` says the repo has no CI on purpose, so `doctor` skips its CI runs check (#405). */
+	ci?: boolean
 	/** The command implementers and fixers run before pushing (#361); unset means the repo's CLAUDE.md or AGENTS.md says. */
 	checkCommand?: string
 	source: ConfigSource
@@ -132,6 +134,7 @@ export async function readConfig(dir: string): Promise<RepoAiConfig> {
 			autoMerge: own.autoMerge === true,
 			maxAgents: asAtLeast(own.maxAgents, 1),
 			ciWorkflow: asWorkflow(own.ciWorkflow),
+			ci: own.ci === false ? false : undefined,
 			checkCommand: asCommand(own.checkCommand),
 			...Object.fromEntries(
 				Object.entries(LIMITS).map(([k, { min }]) => [k, asAtLeast(own[k], min)])

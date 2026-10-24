@@ -122,6 +122,11 @@ describe('writeConfigSchema', () => {
 		expect(await checkConfigSchema(dir)).toMatchObject({ status: 'ok' })
 	})
 
+	it('does not write a ciWorkflow default when the repo has no CI (#405)', () => {
+		expect(unsetDefaults({ ci: false })).not.toHaveProperty('ciWorkflow')
+		expect(unsetDefaults({})).toHaveProperty('ciWorkflow', 'ci.yml')
+	})
+
 	it('creates the file, migrating .repo-tooling.json settings and leaving it alone', async () => {
 		const dir = newTmpDir()
 		const old = { rules: { aiLoop: { agentUser: 'legacy-bot' }, requiredSkills: ['ai-loop'] } }
