@@ -5,10 +5,10 @@ on:
     paths:
       - 'apps/docs/**'
       - '.github/workflows/docs.yml'
-  # The changelog page is built from GitHub Releases. The release job creates
-  # them with GITHUB_TOKEN, and events from that token never start other
-  # workflows, so `release: published` would never fire. Rebuild when CI —
-  # whose last job is the release — finishes green on main instead.
+  # Rebuild when CI finishes green on main, so changes outside apps/docs (the
+  # schemas it serves) reach the site. The changelog page is built from GitHub
+  # Releases, which the release only creates after its approval: release.yml
+  # dispatches this workflow once it has published.
   workflow_run:
     workflows: [CI]
     types: [completed]

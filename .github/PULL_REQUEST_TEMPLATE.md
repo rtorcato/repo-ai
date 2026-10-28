@@ -4,11 +4,10 @@
 -
 
 <!--
-The PR title becomes the squash commit subject on `main`, and semantic-release
-reads it to decide what the next release contains: feat, fix, perf, refactor,
-revert and update release; docs, ci, chore, test and build do not. Pick the
-type deliberately. Merging does not release: a release is a manual
-`release.yml` dispatch or a closed milestone.
+The PR title becomes the squash commit subject on `main`. What ships is decided
+by changesets: a change to the published package adds one (`pnpm changeset`).
+Merging does not release: the "Version Packages" PR collects the changesets,
+and merging it is the release, after one `release` approval.
 -->
 
 ## Type of change
@@ -33,6 +32,7 @@ type deliberately. Merging does not release: a release is a manual
 
 ## Checklist
 
-- [ ] PR title is a Conventional Commit whose type matches the release you intend (see the note above)
+- [ ] PR title is a Conventional Commit
+- [ ] A changeset is added if the published package changes (`pnpm changeset`)
 - [ ] No breaking changes (or BREAKING CHANGE footer added to commit)
 - [ ] In `--json` mode, only JSON goes to stdout; diagnostics go to stderr

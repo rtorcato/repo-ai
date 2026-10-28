@@ -1,4 +1,7 @@
 packages:
+  # The root is the published package. Unlisted, Changesets cannot see it and
+  # rejects every changeset as "not in the workspace".
+  - '.'
   - 'apps/*'
 
 # core-js's postinstall is only a funding banner; esbuild/sharp (docs site) compile.
