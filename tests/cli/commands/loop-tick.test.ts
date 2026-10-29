@@ -772,6 +772,37 @@ describe('runLoopTick', () => {
 		expect(r.adopt).toEqual([1, 2])
 	})
 
+	it('skips an issue a human claimed with human-wip, in the queue and in decay (#453)', async () => {
+		const root = checkout(newTmpDir())
+		const r = await runLoopTick({
+			root,
+			env: {},
+			now: NOW,
+			gh: fakeGh({
+				suggested: [
+					{ number: 30, updatedAt: daysAgo(40), labels: [{ name: 'ai-suggested' }] },
+					{
+						number: 31,
+						updatedAt: daysAgo(40),
+						labels: [{ name: 'ai-suggested' }, { name: 'human-wip' }],
+					},
+				],
+				queue: [
+					{ number: 40, title: 'ok', body: '', labels: [], author_association: 'OWNER' },
+					{
+						number: 41,
+						title: 'mine',
+						body: '',
+						labels: [{ name: 'human-wip' }],
+						author_association: 'OWNER',
+					},
+				],
+			}),
+		})
+		expect(r.decay).toEqual([30])
+		expect(r.pickups.map((p) => p.number)).toEqual([40])
+	})
+
 	it('picks up bug issues first, keeping queue order within each group (#108)', async () => {
 		const root = checkout(newTmpDir())
 		const issue = (number: number, labels: string[] = []) => ({

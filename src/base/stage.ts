@@ -12,6 +12,7 @@ export const STAGES = [
 	'fixing',
 	'review',
 	'wip',
+	'human',
 	'ready',
 	'holding',
 ] as const
@@ -30,6 +31,8 @@ export function stageOf(labels: readonly string[], isPr: boolean): Stage | null 
 		return null
 	}
 	if (has('ai-wip')) return 'wip'
+	// A human's claim outranks the queue: the loop skips it (#453).
+	if (has('human-wip')) return 'human'
 	if (has('ai-ready')) return 'ready'
 	if (has('holding')) return 'holding'
 	return null

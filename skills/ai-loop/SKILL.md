@@ -32,6 +32,7 @@ First run in a repo, create any that are missing (an existing one errors — ign
 
 ```bash
 gh label create holding    -c '#5319e7' -d 'Gate/holding issue — human judgement, never auto-picked'
+gh label create human-wip  -c '#d4c5f9' -d 'Claimed by a human; the loop never picks it up'
 gh label create ai-ready    -c '#0e8a16' -d 'Eligible for an AI agent to implement'
 gh label create ai-wip     -c '#fbca04' -d 'Claimed by an agent; worktree exists'
 gh label create ai-blocked -c '#b60205' -d 'Agent gave up; needs a human'
