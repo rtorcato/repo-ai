@@ -16,6 +16,11 @@ export const LOOP_LABELS: readonly LabelSpec[] = [
 		color: '5319e7',
 		description: 'Gate/holding issue — human judgement, never auto-picked',
 	},
+	{
+		name: 'human-wip',
+		color: 'd4c5f9',
+		description: 'Claimed by a human; the loop never picks it up',
+	},
 	{ name: 'ai-ready', color: '0e8a16', description: 'Eligible for an AI agent to implement' },
 	{ name: 'ai-wip', color: 'fbca04', description: 'Claimed by an agent; worktree exists' },
 	{ name: 'ai-blocked', color: 'b60205', description: 'Agent gave up; needs a human' },

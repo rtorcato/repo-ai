@@ -20,6 +20,7 @@ const STAGES = [
 	'fixing',
 	'review',
 	'wip',
+	'human',
 	'ready',
 	'holding',
 ] as const satisfies readonly Stage[]
@@ -32,6 +33,7 @@ const STAGE_TONE: Record<Stage, BadgeVariant> = {
 	fixing: 'info',
 	review: 'info',
 	wip: 'info',
+	human: 'info',
 	ready: 'muted',
 	holding: 'muted',
 }

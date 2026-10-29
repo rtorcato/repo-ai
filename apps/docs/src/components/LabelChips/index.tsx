@@ -11,6 +11,7 @@ const ISSUE_LABELS = new Set([
 	'ai-wip',
 	'ai-blocked',
 	'holding',
+	'human-wip',
 	'ai-suggested',
 	'security',
 ])

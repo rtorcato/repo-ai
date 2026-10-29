@@ -26,6 +26,7 @@ describe('stageOf / reviewOf', () => {
 		expect(stageOf(['ai-ready'], false)).toBe('ready')
 		expect(stageOf(['ai-ready', 'ai-wip'], false)).toBe('wip')
 		expect(stageOf(['ai-wip', 'ai-blocked'], false)).toBe('blocked')
+		expect(stageOf(['ai-ready', 'human-wip'], false)).toBe('human')
 		expect(stageOf(['bug'], false)).toBeNull()
 		expect(stageOf(['ai-review', 'ai-ok-code'], true)).toBe('review')
 		expect(stageOf(['ai-changes', 'ai-fixing'], true)).toBe('fixing')

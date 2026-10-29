@@ -234,6 +234,7 @@ Hover a chip for its description. The colours come from the same table `doctor` 
 | `ai-wip` | issue | Claimed; a worktree exists. |
 | `ai-blocked` | issue | Agent gave up; needs a human. |
 | `holding` | issue | A gate — closes on human judgement, never picked up. |
+| `human-wip` | issue | A human is working it. Add it when you take an issue yourself: the loop never picks it up, even with `ai-ready`, and an `ai-suggested` issue carrying it never decays. |
 | `ai-review` | PR | Awaiting agent review. |
 | `ai-reviewing-code` | PR | `code-reviewer` claimed and running. Cleared with its verdict. |
 | `ai-reviewing-sec` | PR | `security-expert` claimed and running. Cleared with its verdict. |

@@ -890,9 +890,12 @@ export async function runLoopTick(options: LoopTickOptions = {}): Promise<LoopTi
 	const cutoff = now - DECAY_DAYS * 86_400_000
 	result.decay = (suggested ?? [])
 		// A promoted suggestion keeps its label; closing a queued one is unrecoverable.
-		// A security finding must never close itself by going quiet.
+		// A security finding must never close itself by going quiet, nor a human's claim (#453).
 		.filter(
-			(i) => !i.labels.some((l) => ['ai-ready', 'ai-wip', 'holding', 'security'].includes(l.name))
+			(i) =>
+				!i.labels.some((l) =>
+					['ai-ready', 'ai-wip', 'holding', 'human-wip', 'security'].includes(l.name)
+				)
 		)
 		.filter((i) => Date.parse(i.updatedAt) < cutoff)
 		.map((i) => i.number)
@@ -909,7 +912,10 @@ export async function runLoopTick(options: LoopTickOptions = {}): Promise<LoopTi
 	const busy = new Set((wip ?? []).flatMap((i) => namedFiles(i.body ?? '')))
 	const candidates = (queue ?? [])
 		.filter((i) => !i.pull_request)
-		.filter((i) => !i.labels.some((l) => ['ai-wip', 'ai-blocked', 'holding'].includes(l.name)))
+		.filter(
+			(i) =>
+				!i.labels.some((l) => ['ai-wip', 'ai-blocked', 'holding', 'human-wip'].includes(l.name))
+		)
 		// Bugs first; sort is stable, so the API's order holds within each group (#108).
 		.sort((a, b) => Number(isBug(b)) - Number(isBug(a)))
 	// One level deep: stack on a parent's open PR only when that PR targets the default branch (#253).
