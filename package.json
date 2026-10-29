@@ -1,6 +1,6 @@
 {
 	"name": "@rtorcato/repo-ai",
-	"version": "3.10.0",
+	"version": "3.11.0",
 	"description": "The ai-loop pipeline — loop mechanics, Claude Code skills, and their audit — split out of @rtorcato/repo-tooling",
 	"type": "module",
 	"bin": {
