@@ -182,8 +182,8 @@ importers:
         specifier: ^6.1.0
         version: 6.1.0(@biomejs/biome@2.5.15)(@commitlint/cli@21.2.3(@types/node@26.6.4)(conventional-commits-parser@7.1.2)(typescript@7.0.2))(@commitlint/config-conventional@21.2.3)(@commitlint/types@21.2.3)(@types/node@26.6.4)(conventional-changelog-conventionalcommits@10.4.1)(prettier@3.9.10)(tslib@2.8.1)(typescript@7.0.2)(vitest@5.0.3(@types/node@26.6.4)(vite@8.3.3(@types/node@26.6.4)(jiti@2.7.0)(terser@5.51.2)(yaml@2.9.1)))
       '@rtorcato/shared-docs':
-        specifier: ^1.17.0
-        version: 1.17.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+        specifier: ^1.19.0
+        version: 1.19.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       '@types/react':
         specifier: ^19.2.18
         version: 19.3.0
@@ -3186,8 +3186,8 @@ packages:
       vitest:
         optional: true
 
-  '@rtorcato/shared-docs@1.17.0':
-    resolution: {integrity: sha512-oWaABnA0X8JliORgddmnI2swfZotHdimkPWat+korowzFDtqYk1S6Rv2JbylQaBvjbgkisoUxip7HgLtdGrvIA==}
+  '@rtorcato/shared-docs@1.19.0':
+    resolution: {integrity: sha512-txtGrX7m/T9lEXbe8PBYargHomSIre+gy5XRs7HNgtMz9TUiBC5Gzjfe3QcwHHoTFruzCJl2hjqgCx0LEQaMrw==}
     engines: {node: '>=22'}
     hasBin: true
     peerDependencies:
@@ -12569,7 +12569,7 @@ snapshots:
     transitivePeerDependencies:
       - '@types/node'
 
-  '@rtorcato/shared-docs@1.17.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
+  '@rtorcato/shared-docs@1.19.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
     optionalDependencies:
       react: 19.3.0
       react-dom: 19.3.0(react@19.3.0)
