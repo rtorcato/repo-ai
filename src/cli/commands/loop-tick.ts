@@ -912,10 +912,7 @@ export async function runLoopTick(options: LoopTickOptions = {}): Promise<LoopTi
 	const busy = new Set((wip ?? []).flatMap((i) => namedFiles(i.body ?? '')))
 	const candidates = (queue ?? [])
 		.filter((i) => !i.pull_request)
-		.filter(
-			(i) =>
-				!i.labels.some((l) => ['ai-wip', 'ai-blocked', 'holding', 'human-wip'].includes(l.name))
-		)
+		.filter((i) => !i.labels.some((l) => ['ai-wip', 'ai-blocked', 'holding'].includes(l.name)))
 		// Bugs first; sort is stable, so the API's order holds within each group (#108).
 		.sort((a, b) => Number(isBug(b)) - Number(isBug(a)))
 	// One level deep: stack on a parent's open PR only when that PR targets the default branch (#253).
@@ -941,7 +938,12 @@ export async function runLoopTick(options: LoopTickOptions = {}): Promise<LoopTi
 		}
 		return stack ?? {}
 	}
-	for (const { number, title, body, author_association } of candidates) {
+	for (const { number, title, body, author_association, labels } of candidates) {
+		// A human's claim holds the issue; say so rather than drop it silently (#456).
+		if (labels.some((l) => l.name === 'human-wip')) {
+			result.skippedPickups.push({ number, reason: 'claimed by a human (human-wip)' })
+			continue
+		}
 		// The label is the hard gate; association is the backstop.
 		if (!TRUSTED.has(author_association)) {
 			result.skippedPickups.push({

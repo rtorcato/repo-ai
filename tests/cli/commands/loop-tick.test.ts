@@ -801,6 +801,7 @@ describe('runLoopTick', () => {
 		})
 		expect(r.decay).toEqual([30])
 		expect(r.pickups.map((p) => p.number)).toEqual([40])
+		expect(r.skippedPickups).toEqual([{ number: 41, reason: 'claimed by a human (human-wip)' }])
 	})
 
 	it('picks up bug issues first, keeping queue order within each group (#108)', async () => {
