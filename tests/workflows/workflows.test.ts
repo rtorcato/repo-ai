@@ -46,6 +46,34 @@ type Run = (...hooks: unknown[]) => Promise<unknown>
 const UNMETERED_BUDGET = { total: null, spent: () => 0, remaining: () => Number.POSITIVE_INFINITY }
 
 /**
+ * #461: no target set, but `spent()` grows as each agent finishes, by
+ * `cost(label)` output tokens — the way the real `budget.spent()` moves.
+ */
+function metered(cost: (label: string) => number) {
+	let spent = 0
+	return {
+		total: null,
+		spent: () => spent,
+		remaining: () => Number.POSITIVE_INFINITY,
+		charge: (label: string) => {
+			spent += cost(label)
+		},
+	}
+}
+
+/** Each agent spends exactly its role's estimate in ai-loop-pickup.js's TOKENS. */
+const AT_ESTIMATE = (label: string) =>
+	label.startsWith('impl')
+		? 40_000
+		: label.startsWith('fix')
+			? 25_000
+			: label.startsWith('verify')
+				? 3_000
+				: label.startsWith('tier')
+					? 0
+					: 15_000
+
+/**
  * Run a script against stub hooks: `agent` answers from `reply`, keyed by
  * label. `budget` defaults to an unmetered stub; pass one to exercise a cap.
  */
@@ -60,7 +88,16 @@ function run(
 	const logs: string[] = []
 	const prompts: string[] = []
 	const tiers: string[] = []
+	const charge = (budget as { charge?: (label: string) => void }).charge
 	const agent = async (prompt: string, o: { label: string; phase: string; agentType?: string }) => {
+		const out = await answer(prompt, o)
+		charge?.(o.label)
+		return out
+	}
+	const answer = async (
+		prompt: string,
+		o: { label: string; phase: string; agentType?: string }
+	) => {
 		if (o.label.startsWith('tier:') && name === 'ai-loop-pickup') {
 			tiers.push(o.label)
 			const t = reply(o.label) as { tier?: string }
@@ -443,7 +480,8 @@ describe('ai-loop-pickup', () => {
 		const { value, spawned, logs } = await run(
 			'ai-loop-pickup',
 			{ ...one, budgetTokens: 80_000 },
-			(label) => (label === 'impl:#1' ? { pr: 10 } : { passed: false })
+			(label) => (label === 'impl:#1' ? { pr: 10 } : { passed: false }),
+			metered(AT_ESTIMATE)
 		)
 		expect(spawned.map((s) => s.phase)).toEqual(['Implement', 'Review', 'Review', 'Review'])
 		expect(logs.join()).toContain('skipped fix:#1:r1 — token budget exhausted')
@@ -467,6 +505,23 @@ describe('ai-loop-pickup', () => {
 		expect(value).toMatchObject({ skipped: [] })
 	})
 
+	// #461: 6 implementers' estimates (240K) plus 12 reviews' (180K) exceed 400K, so
+	// before reservations were released a tick that had spent far less skipped reviews.
+	it('releases each estimate when its agent finishes, so real spend sets the cap (#461)', async () => {
+		const { value, spawned, logs } = await run(
+			'ai-loop-pickup',
+			{ ...one, issues: [1, 2, 3, 4, 5, 6].map(issue) },
+			(label) =>
+				label.startsWith('impl') ? { pr: Number(label.slice(6)) + 10 } : { passed: true },
+			metered(() => 8_000)
+		)
+		expect(
+			spawned.filter((s) => s.phase === 'Review' && !s.label.startsWith('verify'))
+		).toHaveLength(12)
+		expect(logs).toEqual([])
+		expect(value).toMatchObject({ skipped: [] })
+	})
+
 	it('stops queuing past the token budget, spending it on the first issue', async () => {
 		const { value, spawned, logs } = await run(
 			'ai-loop-pickup',
@@ -478,7 +533,8 @@ describe('ai-loop-pickup', () => {
 				budgetTokens: 40_000,
 				issues: [issue(1), issue(2)],
 			},
-			(label) => (label === 'impl:#1' ? { pr: 10 } : { passed: true })
+			(label) => (label === 'impl:#1' ? { pr: 10 } : { passed: true }),
+			metered(AT_ESTIMATE)
 		)
 		expect(spawned.map((s) => s.label)).toEqual(['impl:#1'])
 		expect((value as { issues: unknown[] }).issues).toEqual([

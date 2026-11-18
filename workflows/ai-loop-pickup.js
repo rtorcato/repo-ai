@@ -92,26 +92,38 @@ const DEFAULT_BUDGET_TOKENS = 400_000
 const TOKENS = { impl: 40_000, fix: 25_000, review: 15_000, verify: 3_000 }
 const tokenBudget = args.budgetTokens ?? DEFAULT_BUDGET_TOKENS
 const startSpent = budget.spent()
-// #41: reserve this tick's estimated spend as agents queue, against whichever
-// is tighter: the config cap or a real interactive '+Nk' target.
-// `budget.remaining()` won't move until an agent actually finishes, so
-// `reserved` tracks this tick's own not-yet-spent commitments against it —
-// never silently drop an unaffordable agent, just log it and leave its
-// issue/PR labelled for the next tick to pick up (an implementer skip leaves
-// the issue `ai-wip` for `loop reap` to notice; a reviewer skip leaves the PR
-// `ai-review` for the next tick's Pass 3 to claim normally).
-const ceiling = Math.min(tokenBudget, budget.remaining())
+// #41: an agent is affordable when what this tick has actually spent, plus the
+// estimates of agents still running, leaves room for its estimate — against
+// both the config cap and a real interactive '+Nk' target (`budget.remaining()`,
+// which already nets out actual spend). `budget.spent()` only moves when an
+// agent finishes, so `reserved` holds the running agents' estimates; #461:
+// `spend()` releases each one when its agent finishes, once its real output is
+// in `spent()`. Never releasing them charged every finished agent its estimate
+// on top of its real spend, so a tick that had spent 96K skipped reviews as
+// over a 400K cap. Never silently drop an unaffordable agent, just log it and
+// leave its issue/PR labelled for the next tick to pick up (an implementer
+// skip leaves the issue `ai-wip` for `loop reap` to notice; a reviewer skip
+// leaves the PR `ai-review` for the next tick's Pass 3 to claim normally).
 let reserved = 0
 // #218: returned too, so the report can name which issue lost an agent.
 const skipped = []
 function afford(label, cost) {
-	if (ceiling - reserved < cost) {
+	const room = Math.min(tokenBudget - (budget.spent() - startSpent), budget.remaining()) - reserved
+	if (room < cost) {
 		log(`skipped ${label} — token budget exhausted, left for the next tick`)
 		skipped.push(label)
 		return false
 	}
 	reserved += cost
 	return true
+}
+// Runs an agent `afford()` already reserved `cost` for, releasing it once the agent ends.
+async function spend(cost, run) {
+	try {
+		return await run()
+	} finally {
+		reserved -= cost
+	}
 }
 
 // Round 0 is the first review; round N re-reviews the head fix round N pushed.
@@ -130,7 +142,7 @@ ${RELAYED}`,
 		{ label: `tier:${tag(i, round)}`, phase: 'Review', schema: TIER }
 	)
 	const ran = (tiered?.tier === 'both' ? [BOTH] : REVIEWERS).filter((v) => afford(`${v.type}:${tag(i, round)}`, TOKENS.review))
-	const returned = await parallel(ran.map((v) => () => agent(
+	const returned = await parallel(ran.map((v) => () => spend(TOKENS.review, () => agent(
 		`Review GitHub PR #${pr} in ${args.repo}. First claim your arm:
 \`gh pr edit ${pr} --add-label ${v.claim}${args.agentUser ? ` --add-assignee ${args.agentUser}` : ''}\` — the label
 stops a concurrent ai-loop tick spawning a duplicate of you, and the
@@ -176,12 +188,12 @@ A question only a human can answer → pass + ai-notes, never ai-changes.
 
 ${RELAYED}`,
 		{ label: `${v.type}:${tag(i, round)}`, phase: 'Review', schema: VERDICT, agentType: args.namedReviewers ? v.type : 'general-purpose' }
-	)))
+	))))
 	if (!ran.length) return []
 	// Reserved, never skipped: an unverified verdict is the bug this exists to close.
 	// #242: a one-command lookup, so pinned to haiku (it cost ~38k on Opus). TOKENS.verify counts output only.
 	reserved += TOKENS.verify
-	const checked = await agent(
+	const checked = await spend(TOKENS.verify, () => agent(
 		`Check what reviewers posted on GitHub PR #${pr} in ${args.repo}. For each arm in
 ${ran.flatMap((v) => v.arms).join(', ')} run \`repo-ai loop verdict ${pr} --arm <arm> --json\` and report its
 \`verdict\` — \`NONE\` when it is null. \`gh\` fails TLS verification inside the Bash
@@ -192,7 +204,7 @@ not review the PR yourself.
 
 ${RELAYED}`,
 		{ label: `verify:${tag(i, round)}`, phase: 'Review', schema: VERIFIED, model: 'haiku' }
-	)
+	))
 	return ran.flatMap((v, n) => v.arms.map((arm) => {
 		const verdict = checked?.verdicts?.find((c) => c.arm === arm)?.verdict ?? 'NONE'
 		const posted = verdict !== 'NONE'
@@ -229,7 +241,7 @@ ${RELAYED}`,
 const results = await pipeline(
 	args.issues,
 
-	(i) => (afford(`impl:#${i.number}`, TOKENS.impl) ? agent(
+	(i) => (afford(`impl:#${i.number}`, TOKENS.impl) ? spend(TOKENS.impl, () => agent(
 		`Implement GitHub issue #${i.number} ("${i.title}") in ${args.repo}.
 
 1. Your working directory is ${i.worktree} — it and its branch ${i.slug} already
@@ -263,7 +275,7 @@ Handing back means the human ends up the only assignee.
 
 ${RELAYED}`,
 		{ label: `impl:#${i.number}`, phase: 'Implement', schema: PR }
-	) : null),
+	)) : null),
 
 	async (r, i) => {
 		if (!r?.pr) return r
@@ -275,7 +287,7 @@ ${RELAYED}`,
 		while (reviews.some((v) => v?.passed === false) && fixRounds < MAX_FIX_ROUNDS) {
 			if (!afford(`fix:${tag(i, fixRounds + 1)}`, TOKENS.fix)) break
 			fixRounds++
-			const fixed = await fix(r.pr, i, fixRounds)
+			const fixed = await spend(TOKENS.fix, () => fix(r.pr, i, fixRounds))
 			if (!fixed?.pushed) break
 			reviews = await review(r.pr, i, fixRounds)
 		}

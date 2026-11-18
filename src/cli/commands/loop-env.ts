@@ -11,7 +11,7 @@ import { resolveDefaultBranch } from '../../base/default-branch.js'
 import { type GitExec, realGitExec } from '../../base/git.js'
 import { type GhExec, realGhExec } from '../../base/gh.js'
 import { installCommand } from '../../base/package-manager.js'
-import { ghFailure } from '../../base/prereqs.js'
+import { ghFailure, isTlsFailure, tlsFailureMessage } from '../../base/prereqs.js'
 import { configuredAgentUser, defaultWorktreeRoot } from './loop-guard.js'
 
 /**
@@ -86,25 +86,39 @@ export async function resolveLoopEnv(options: LoopEnvOptions = {}): Promise<Loop
 
 	const repo = await gh(['repo', 'view', '--json', 'nameWithOwner', '--jq', '.nameWithOwner'])
 	const ownerRepo = repo.ok ? repo.stdout.trim() : ''
+	// #461: a TLS failure (Claude Code's sandbox) breaks every gh call that
+	// follows, so it is the one warning: the repo, default-branch and agentUser
+	// warnings it would otherwise cause are all false.
+	const tls = isTlsFailure(repo)
+	if (tls) warnings.push(tlsFailureMessage(repo))
 	// #359: say why — gh missing, logged out, or a remote that isn't on GitHub.
-	if (!ownerRepo)
+	else if (!ownerRepo)
 		warnings.push(
 			`could not resolve the GitHub repo from the working directory: ${ghFailure(repo)} — run \`npx @rtorcato/repo-ai doctor\``
 		)
 
 	const defaultBranch = await resolveDefaultBranch(git, gh)
-	if (!defaultBranch) warnings.push('could not resolve the default branch')
+	if (!defaultBranch && !tls) warnings.push('could not resolve the default branch')
 
 	let agentUser = env.AI_LOOP_AGENT?.trim() || (root ? await configuredAgentUser(root) : '') || ''
 	// LOGIN is the injection boundary — the login goes into an API path.
-	if (
-		agentUser &&
-		(!ownerRepo ||
-			!LOGIN.test(agentUser) ||
-			!(await gh(['api', `repos/${ownerRepo}/assignees/${agentUser}`, '--silent'])).ok)
-	) {
-		warnings.push(`agentUser '${agentUser}' is not an assignable collaborator — assigning nothing`)
+	if (agentUser && tls) {
+		// Unverifiable, not unassignable: say nothing more than the TLS warning.
 		agentUser = ''
+	} else if (agentUser) {
+		const assignable =
+			ownerRepo && LOGIN.test(agentUser)
+				? await gh(['api', `repos/${ownerRepo}/assignees/${agentUser}`, '--silent'])
+				: null
+		if (assignable && isTlsFailure(assignable)) {
+			warnings.push(tlsFailureMessage(assignable))
+			agentUser = ''
+		} else if (!assignable?.ok) {
+			warnings.push(
+				`agentUser '${agentUser}' is not an assignable collaborator — assigning nothing`
+			)
+			agentUser = ''
+		}
 	}
 
 	const config = root ? await readConfig(root) : null

@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import type { GhResult } from '../../src/base/gh.js'
-import { type CmdExec, checkPrerequisites, ghFailure } from '../../src/base/prereqs.js'
+import {
+	type CmdExec,
+	checkPrerequisites,
+	ghFailure,
+	isTlsFailure,
+} from '../../src/base/prereqs.js'
 
 const ok = (stdout: string): GhResult => ({ ok: true, stdout, stderr: '', code: 0 })
 const fail = (stderr: string, code: number | null = 1): GhResult => ({
@@ -176,5 +181,18 @@ describe('ghFailure', () => {
 			'HTTP 401: Bad credentials'
 		)
 		expect(ghFailure(fail('', 4))).toBe('gh exited 4')
+	})
+})
+
+describe('isTlsFailure (#461)', () => {
+	const r = (stderr: string, ok = false) => ({ ok, stdout: '', stderr, code: ok ? 0 : 1 })
+	it("matches the sandbox's x509 failures", () => {
+		expect(isTlsFailure(r('tls: failed to verify certificate: x509: OSStatus -26276'))).toBe(true)
+		expect(isTlsFailure(r('x509: certificate signed by unknown authority'))).toBe(true)
+	})
+	it('ignores other failures and successes', () => {
+		expect(isTlsFailure(r('HTTP 401: Bad credentials'))).toBe(false)
+		expect(isTlsFailure(r('Error: spawn gh ENOENT'))).toBe(false)
+		expect(isTlsFailure(r('x509: noise', true))).toBe(false)
 	})
 })
