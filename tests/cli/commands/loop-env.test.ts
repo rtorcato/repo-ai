@@ -60,6 +60,25 @@ describe('resolveLoopEnv', () => {
 		expect(env.warnings).toContainEqual(expect.stringContaining('gh is not on PATH'))
 	})
 
+	it('reports a gh TLS failure as the cause, without the false warnings it causes (#461)', async () => {
+		const root = checkout(newTmpDir())
+		fs.writeJsonSync(join(root, '.repo-ai.json'), { agentUser: 'bot' })
+		const gh: GhExec = async () => ({
+			ok: false,
+			stdout: '',
+			stderr:
+				'Get "https://api.github.com/repos/acme/widget": tls: failed to verify certificate: x509: OSStatus -26276\n',
+			code: 1,
+		})
+		const env = await resolveLoopEnv({ dir: root, gh, env: {} })
+		expect(env.ownerRepo).toBe('')
+		expect(env.agentUser).toBe('')
+		expect(env.warnings).toHaveLength(1)
+		expect(env.warnings[0]).toMatch(/gh failed TLS verification.*OSStatus -26276.*sandbox/)
+		expect(env.warnings[0]).toContain('fix sandbox')
+		expect(env.warnings.join()).not.toMatch(/could not resolve|not an assignable collaborator/)
+	})
+
 	it('resolves ROOT to the main checkout from inside a linked worktree', async () => {
 		const tmp = newTmpDir()
 		const root = checkout(tmp)

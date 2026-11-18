@@ -480,6 +480,11 @@ Excluding `gh *` runs `gh` with your keychain and network, which the loop
 needs anyway to label PRs. A chained call such as `cd x && gh …` still runs
 sandboxed.
 
+A tick or `loop watch` whose `gh` fails this way halts with one cause, `gh
+failed TLS verification (… x509: OSStatus -26276)`, and names this fix. It does
+not also report the repo as unresolvable or `agentUser` as unassignable. The
+Monitor tool can't leave the sandbox, so `loop watch` needs the exclude above.
+
 On a repo with `agentUser` set, `doctor` reads all three files and warns once
 for each rule that is missing.
 
@@ -620,6 +625,9 @@ by `fix claude-skills`. Details that break if "tidied":
   PR opens, without waiting for A.
 - **Caps are enforced in the scripts (#41).** A task past `maxTasksPerTick` or
   `budgetTokens` is `log()`ged, not spawned, and its label waits for a later tick.
+  Pickup charges each agent its role's estimate only while it runs, then its
+  real output tokens (#461), so agents that spend less than estimated leave room
+  for more.
 - **`outputTokensSpent` counts output tokens only** — the harness's own total,
   input and cache reads included, runs about 8-9× higher, so the report's
   `·NtokK` is a relative gauge.

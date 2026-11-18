@@ -30,6 +30,26 @@ export function ghFailure(r: GhResult): string {
 	)
 }
 
+/**
+ * #461: gh could not verify GitHub's TLS certificate. Inside Claude Code's macOS
+ * sandbox gh has no keychain access and fails with `x509: OSStatus -26276`;
+ * every later gh call fails the same way, so callers report this once as the
+ * cause instead of a string of downstream warnings.
+ */
+export function isTlsFailure(r: GhResult): boolean {
+	return (
+		!r.ok &&
+		/x509:|OSStatus -26276|tls: failed to verify|certificate (?:signed by unknown|verify failed|is not trusted)/i.test(
+			r.stderr
+		)
+	)
+}
+
+/** The one line a TLS failure is reported as. */
+export function tlsFailureMessage(r: GhResult): string {
+	return `gh failed TLS verification (${ghFailure(r)}) — most likely Claude Code's sandbox, where gh has no keychain access. Run \`npx @rtorcato/repo-ai fix sandbox\`, or run the command with the sandbox disabled`
+}
+
 const firstLine = (s: string) => s.trim().split('\n')[0] ?? ''
 
 /** `git@host:o/r`, `https://host/o/r` and `ssh://git@host/o/r`, never `nothost.example`. */
