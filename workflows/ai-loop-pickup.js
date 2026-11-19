@@ -176,7 +176,13 @@ human would do at merge time, or exactly \`Nothing.\` Cap the body at that
 section plus ≤600 characters above it; never list what you checked and found
 clean. Real follow-up work that does not decide this merge: file it as its own
 issue labelled ai-suggested (≤10-line body) and put \`Follow-up: #<new>\` above
-the section.
+the section. A defect or fix also gets exactly one priority label (features,
+refactors, spikes and docs get none): bug-p1 broken and it hurts now (wrong
+output, crash, release/CI blocker, data loss); bug-p2 broken with a workaround
+or an edge case; bug-p3 minor or cosmetic breakage; fix-p1 not broken but fix
+soon (hardening, near deprecation, blocks other work); fix-p2 tech debt, missing
+tests, stale config; fix-p3 hygiene and small chores. A security finding keeps
+\`security\` and also gets one.
 
 Then apply exactly one verdict label, clearing your claim in the same command:
 - Clean, or only nit-level suggestions →

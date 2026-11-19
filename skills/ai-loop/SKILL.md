@@ -48,7 +48,26 @@ gh label create ai-notes   -c '#fbca04' -d 'Passed, but a reviewer left somethin
 gh label create merge-ready -c '#8250df' -d 'Both agent reviews passed and the PR is mergeable — waiting on a human'
 gh label create ai-suggested -c '#c2e0c6' -d 'Follow-up surfaced by an agent review — triage queue, never auto-picked'
 gh label create security -c '#ee0701' -d 'Security finding — never auto-closed'
+gh label create bug-p1 -c '#b60205' -d 'Broken and it hurts now: wrong output, crash, release/CI blocker, data loss'
+gh label create bug-p2 -c '#e4606d' -d 'Broken, but there is a workaround or it hits an edge case'
+gh label create bug-p3 -c '#f9c0c5' -d 'Broken in a minor or cosmetic way'
+gh label create fix-p1 -c '#b35900' -d 'Not broken, but fix soon: hardening, near deprecation, blocks other work'
+gh label create fix-p2 -c '#e99a45' -d 'Should be fixed: tech debt, missing tests, stale config'
+gh label create fix-p3 -c '#fbdcb5' -d 'Nice to fix: hygiene and small chores, such as a missing LICENSE'
 ```
+
+**Priority labels** (#464). Every issue an agent files for a defect or fix gets exactly one; features, refactors, spikes and docs get none. A security finding keeps `security` and also gets one for severity:
+
+| Label | When |
+|---|---|
+| `bug-p1` | Broken and it hurts now: wrong output, a crash, a release or CI blocker, data loss. |
+| `bug-p2` | Broken, but there is a workaround or it hits an edge case. |
+| `bug-p3` | Broken in a minor or cosmetic way. |
+| `fix-p1` | Not broken, but must be fixed soon: hardening, a deprecation with a near deadline, a gap that blocks other work. |
+| `fix-p2` | Should be fixed: tech debt, missing tests, stale config. |
+| `fix-p3` | Nice to fix: hygiene and small chores, such as a missing LICENSE. |
+
+The tick picks up `ai-ready` issues in the order `bug-p1`, `fix-p1`, `bug-p2`, `fix-p2`, `bug-p3`, `fix-p3`, then everything else (a plain `bug` first), oldest first within each.
 
 Also once per repo: `grep -qxF '.claude/ai-loop-status' '<root>/.gitignore' || echo '.claude/ai-loop-status' >> '<root>/.gitignore'`.
 
@@ -134,7 +153,7 @@ Pass 4's Workflow normally reviews and fixes its own PRs; this pass picks up wha
 >
 > then a blank line; the verdict must agree with your labels and your section: `PASS-NOTES` if and only if `### Before merging` has a bullet, so `Nothing.` is always `PASS`. It **must end** with `### Before merging` and either one bullet per finding that changes whether or how a human merges (semver, a deliberate omission, a risky migration, a human-only decision) or `Nothing.` — the common verdict. ≤600 characters above it; narrate only where the PR is **wrong** or **silent**.
 >
-> **An open question is not a finding.** Settle it with a read-only check (e.g. `gh api`), or pass with `Nothing.`, or file a follow-up — but an unverified risk (can't tell if an input is sanitized) is a `CHANGES` candidate first. Never write a note concluding "no action needed". **Later work is an issue, not a note:** `gh issue create --label ai-suggested --title "<what>" --body "🤖 *Automated — \`<your agent type>\` via ai-loop.*` + blank line + `Surfaced reviewing #<N>. <What. Why. One-line fix sketch.>"` (≤10 lines), then `Follow-up: #<new>` above `### Before merging`.
+> **An open question is not a finding.** Settle it with a read-only check (e.g. `gh api`), or pass with `Nothing.`, or file a follow-up — but an unverified risk (can't tell if an input is sanitized) is a `CHANGES` candidate first. Never write a note concluding "no action needed". **Later work is an issue, not a note:** `gh issue create --label ai-suggested [--label <bug-pN|fix-pN>] --title "<what>" --body "🤖 *Automated — \`<your agent type>\` via ai-loop.*` + blank line + `Surfaced reviewing #<N>. <What. Why. One-line fix sketch.>"` (≤10 lines), then `Follow-up: #<new>` above `### Before merging`. A defect or fix takes exactly one priority label from the rubric under Labels; a feature, refactor, spike or docs follow-up takes none.
 >
 > Apply exactly one verdict, **clearing your claim in the same command**:
 > - Clean or nits → `gh pr edit <N> --add-label <ai-ok-code|ai-ok-sec> --remove-label <ai-reviewing-code|ai-reviewing-sec>`

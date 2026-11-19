@@ -62,8 +62,23 @@ only if it is a repo collaborator; backtick every other one (`` `@name` ``),
 because a bare `@handle` notifies its owner. The body opens with a line saying
 an agent wrote it — everything you post appears under the owner's own account:
 
+**Pick a priority.** A defect or fix gets exactly one priority label, added as
+a second `--label`; a feature, refactor, spike or docs issue gets none. The loop
+picks up `bug-p1`, `fix-p1`, `bug-p2`, `fix-p2`, `bug-p3`, `fix-p3`, then
+everything else, oldest first within each. A security finding keeps `security`
+and also gets one:
+
+| Label | When |
+|---|---|
+| `bug-p1` | Broken and it hurts now: wrong output, a crash, a release or CI blocker, data loss. |
+| `bug-p2` | Broken, but there is a workaround or it hits an edge case. |
+| `bug-p3` | Broken in a minor or cosmetic way. |
+| `fix-p1` | Not broken, but must be fixed soon: hardening, a deprecation with a near deadline, a gap that blocks other work. |
+| `fix-p2` | Should be fixed: tech debt, missing tests, stale config. |
+| `fix-p3` | Nice to fix: hygiene and small chores, such as a missing LICENSE. |
+
 ```bash
-gh issue create --label ai-ready --title "TITLE" --body "$(cat <<'EOF'
+gh issue create --label ai-ready [--label <bug-pN|fix-pN>] --title "TITLE" --body "$(cat <<'EOF'
 🤖 *Filed by Claude (AI agent) on the owner's behalf.*
 
 BODY

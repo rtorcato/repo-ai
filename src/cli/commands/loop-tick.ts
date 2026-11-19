@@ -11,6 +11,7 @@ import {
 	runAttempt,
 } from '../../base/ci-runs.js'
 import { limit, readConfig } from '../../base/config.js'
+import { priorityRank } from '../../base/label-specs.js'
 import { releaseGated } from '../../base/release-gate.js'
 import { securityAlertWarning } from '../../base/security-alerts.js'
 import {
@@ -902,19 +903,22 @@ export async function runLoopTick(options: LoopTickOptions = {}): Promise<LoopTi
 
 	// The whole ai-ready queue, not a page of it (#163) — a capped read would
 	// silently starve issues past the cap every tick.
+	// Oldest first, so the stable priority sort below keeps age order within each rank (#464).
 	const queue = await ghPaginated<RestIssue>(
 		gh,
-		`repos/${ownerRepo}/issues?labels=ai-ready&state=open&per_page=100`
+		`repos/${ownerRepo}/issues?labels=ai-ready&state=open&sort=created&direction=asc&per_page=100`
 	)
 	if (queue === null) errors.push(`gh api repos/${ownerRepo}/issues failed`)
 	const isBug = (i: RestIssue) => i.labels.some((l) => l.name === 'bug')
+	// Priority labels first (#464); among the unprioritised, a plain `bug` still leads (#108).
+	const rank = (i: RestIssue) => priorityRank(i.labels) * 2 + Number(!isBug(i))
 	// A candidate sharing a file with an in-flight issue waits its turn (#120).
 	const busy = new Set((wip ?? []).flatMap((i) => namedFiles(i.body ?? '')))
 	const candidates = (queue ?? [])
 		.filter((i) => !i.pull_request)
 		.filter((i) => !i.labels.some((l) => ['ai-wip', 'ai-blocked', 'holding'].includes(l.name)))
-		// Bugs first; sort is stable, so the API's order holds within each group (#108).
-		.sort((a, b) => Number(isBug(b)) - Number(isBug(a)))
+		// Sort is stable, so the API's oldest-first order holds within each rank (#108, #464).
+		.sort((a, b) => rank(a) - rank(b))
 	// One level deep: stack on a parent's open PR only when that PR targets the default branch (#253).
 	const stackFor = async (
 		body: string

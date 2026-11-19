@@ -830,6 +830,49 @@ describe('runLoopTick', () => {
 		expect(r.pickups.map((p) => p.number)).toEqual([51, 53, 50, 52])
 	})
 
+	it('picks up by priority label, then plain bugs, keeping queue order within each rank (#464)', async () => {
+		const root = checkout(newTmpDir())
+		const issue = (number: number, labels: string[] = []) => ({
+			number,
+			title: `#${number}`,
+			body: '',
+			labels: labels.map((name) => ({ name })),
+			author_association: 'OWNER',
+		})
+		const r = await runLoopTick({
+			root,
+			env: { AI_LOOP_MAX_IN_FLIGHT: '20' },
+			now: NOW,
+			gh: fakeGh({
+				queue: [
+					issue(70),
+					issue(71, ['fix-p3']),
+					issue(72, ['bug']),
+					issue(73, ['bug-p2']),
+					issue(74, ['fix-p1']),
+					issue(75, ['bug-p1', 'security']),
+					issue(76, ['fix-p2']),
+					issue(77, ['bug-p3', 'fix-p1']),
+					issue(78, ['bug-p1']),
+				],
+			}),
+		})
+		expect(r.pickups.map((p) => p.number)).toEqual([75, 78, 74, 77, 73, 76, 71, 72, 70])
+	})
+
+	it('asks for the ai-ready queue oldest first (#464)', async () => {
+		const root = checkout(newTmpDir())
+		const inner = fakeGh({ queue: [] })
+		const seen: string[] = []
+		const gh: GhExec = (args, ...rest) => {
+			seen.push(...args.filter((a) => a.includes('labels=ai-ready')))
+			return inner(args, ...rest)
+		}
+		await runLoopTick({ root, env: {}, now: NOW, gh })
+		expect(seen).toHaveLength(1)
+		expect(seen[0]).toContain('sort=created&direction=asc')
+	})
+
 	it('reads the whole ai-ready queue across more than one page (#163)', async () => {
 		const root = checkout(newTmpDir())
 		const issue = (number: number) => ({

@@ -60,4 +60,45 @@ export const LOOP_LABELS: readonly LabelSpec[] = [
 		color: 'ee0701',
 		description: 'Security finding — never auto-closed',
 	},
+	// Priority (#464): strong to pale. `bug-*` = broken, `fix-*` = not broken but needs fixing.
+	{
+		name: 'bug-p1',
+		color: 'b60205',
+		description: 'Broken and it hurts now: wrong output, crash, release/CI blocker, data loss',
+	},
+	{
+		name: 'bug-p2',
+		color: 'e4606d',
+		description: 'Broken, but there is a workaround or it hits an edge case',
+	},
+	{ name: 'bug-p3', color: 'f9c0c5', description: 'Broken in a minor or cosmetic way' },
+	{
+		name: 'fix-p1',
+		color: 'b35900',
+		description: 'Not broken, but fix soon: hardening, near deprecation, blocks other work',
+	},
+	{
+		name: 'fix-p2',
+		color: 'e99a45',
+		description: 'Should be fixed: tech debt, missing tests, stale config',
+	},
+	{
+		name: 'fix-p3',
+		color: 'fbdcb5',
+		description: 'Nice to fix: hygiene and small chores, such as a missing LICENSE',
+	},
 ]
+
+/**
+ * Pickup and listing order (#464): `bug-p1`, `fix-p1`, `bug-p2`, `fix-p2`, `bug-p3`, `fix-p3`,
+ * then everything else. Callers keep oldest-first within each rank.
+ */
+export const PRIORITY_LABELS = ['bug-p1', 'fix-p1', 'bug-p2', 'fix-p2', 'bug-p3', 'fix-p3'] as const
+
+/** An issue's priority rank: its best priority label's index, or `PRIORITY_LABELS.length` with none. */
+export function priorityRank(labels: readonly { name: string }[]): number {
+	const ranks = labels
+		.map((l) => (PRIORITY_LABELS as readonly string[]).indexOf(l.name))
+		.filter((i) => i >= 0)
+	return ranks.length ? Math.min(...ranks) : PRIORITY_LABELS.length
+}
