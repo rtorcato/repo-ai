@@ -4,7 +4,7 @@ description: The end-to-end label-driven pipeline that turns an ai-ready GitHub 
 ---
 
 import Link from '@docusaurus/Link'
-import LabelChips, { Labels } from '@site/src/components/LabelChips'
+import LabelChips, { Label, Labels } from '@site/src/components/LabelChips'
 import LoopWalkthrough from '@site/src/components/LoopWalkthrough'
 
 `ai-loop` is a **label-driven pipeline** that takes a GitHub issue marked
@@ -247,6 +247,22 @@ Hover a chip for its description. The colours come from the same table `doctor` 
 | `merge-ready` | PR | Both agent reviews passed and the PR is mergeable — waiting on a human. Supersedes the `ai-ok-*` pair rather than joining it. |
 | `ai-suggested` | issue | A follow-up a reviewer filed. A triage queue: never picked up automatically. Add `ai-ready` to queue it; closed after 30 days untouched, unless it also carries `security`. |
 | `security` | issue | A security finding. Marks the issue and exempts it from the 30-day `ai-suggested` decay, so an unfixed finding never closes itself. |
+| `bug-p1` … `fix-p3` | issue | Priority. Set by whoever files a defect or fix; see below. |
+
+### Priority labels
+
+Every issue an agent files for a defect or a fix carries exactly one priority label, so the triage queue shows how urgent each one is. Features, refactors, spikes and docs get none. A security finding keeps `security` and also gets one for its severity.
+
+| Label | When |
+|---|---|
+| <Label name="bug-p1" /> | Broken and it hurts now: wrong output, a crash, a release or CI blocker, data loss. |
+| <Label name="bug-p2" /> | Broken, but there is a workaround or it hits an edge case. |
+| <Label name="bug-p3" /> | Broken in a minor or cosmetic way. |
+| <Label name="fix-p1" /> | Nothing is broken, but it must be fixed soon: hardening, a deprecation with a near deadline, a gap that blocks other work. |
+| <Label name="fix-p2" /> | Should be fixed: tech debt, missing tests, stale config. |
+| <Label name="fix-p3" /> | Nice to fix: hygiene and small chores, such as a missing LICENSE. |
+
+The tick picks up `ai-ready` issues in this order, and `/ai-loop-status` lists the queue the same way: `bug-p1`, `fix-p1`, `bug-p2`, `fix-p2`, `bug-p3`, `fix-p3`, then everything else. Among issues with no priority label, a plain `bug` still goes first. Within each rank the oldest issue goes first.
 
 ### What you'll see on a PR
 
@@ -589,7 +605,7 @@ reports each in `.applied[]`, and returns the comments still owed in `.comments[
   `loop guard --removed`, and applies the label side of every `.stalled[]` verdict.
 - **Claims** — `ai-reviewing-*` for `.reviewsToSpawn[]` and `ai-fixing` for
   fix rounds, within `maxTasksPerTick`, fixes first; then the first `slots`
-  pickups (`ai-wip` on, `ai-ready` off, worktree created), skipping one whose
+  pickups in priority order (`ai-wip` on, `ai-ready` off, worktree created), skipping one whose
   backticked paths overlap another pickup's (#594) — shared docs like `SKILL.md`
   and `ai-loop.md` don't count (#185).
 

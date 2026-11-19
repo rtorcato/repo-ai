@@ -3,6 +3,7 @@ import path, { join } from 'node:path'
 import fs from 'fs-extra'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { GhExec, GhResult } from '../../src/base/gh.js'
+import { PRIORITY_LABELS, priorityRank } from '../../src/base/label-specs.js'
 import { applyLoopLabels, checkLoopLabels, LOOP_LABELS } from '../../src/base/labels.js'
 import { useTmpDir } from '../helpers/tmp-dir.js'
 
@@ -200,5 +201,21 @@ describe('skills/ai-loop/SKILL.md bootstrap block', () => {
 			description,
 		}))
 		expect(fromSkill).toEqual(LOOP_LABELS.map((l) => ({ ...l })))
+	})
+})
+
+describe('priorityRank (#464)', () => {
+	it('ranks bug-p1, fix-p1, bug-p2, fix-p2, bug-p3, fix-p3, then everything else', () => {
+		const r = (...names: string[]) => priorityRank(names.map((name) => ({ name })))
+		expect(['bug-p1', 'fix-p1', 'bug-p2', 'fix-p2', 'bug-p3', 'fix-p3'].map((n) => r(n))).toEqual([
+			0, 1, 2, 3, 4, 5,
+		])
+		expect(r()).toBe(6)
+		expect(r('bug', 'enhancement')).toBe(6)
+		expect(r('fix-p3', 'bug-p2')).toBe(2)
+	})
+
+	it('has a spec for every priority label', () => {
+		for (const name of PRIORITY_LABELS) expect(LOOP_LABELS.some((l) => l.name === name)).toBe(true)
 	})
 })

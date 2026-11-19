@@ -1,11 +1,13 @@
 import type { ReactNode } from 'react'
 // The same table `doctor` and `fix labels` enforce, so these swatches can't drift (#272).
-import { LOOP_LABELS } from '../../../../../src/base/label-specs'
+import { LOOP_LABELS, PRIORITY_LABELS } from '../../../../../src/base/label-specs'
 import styles from './styles.module.css'
 
 const BY_NAME = new Map(LOOP_LABELS.map((l) => [l.name, l]))
 
-// Labels that live on issues; everything else is on PRs.
+const PRIORITY = new Set<string>(PRIORITY_LABELS)
+
+// Labels that live on issues; everything else is on PRs. Priority labels get their own group (#464).
 const ISSUE_LABELS = new Set([
 	'ai-ready',
 	'ai-wip',
@@ -48,12 +50,19 @@ export function Labels({ names }: { names: string }): ReactNode {
 	)
 }
 
-function Group({ title, issue }: { title: string; issue: boolean }): ReactNode {
+type Where = 'issue' | 'pr' | 'priority'
+
+function where(name: string): Where {
+	if (PRIORITY.has(name)) return 'priority'
+	return ISSUE_LABELS.has(name) ? 'issue' : 'pr'
+}
+
+function Group({ title, kind }: { title: string; kind: Where }): ReactNode {
 	return (
 		<div className={styles.group}>
 			<div className={styles.groupTitle}>{title}</div>
 			<ul className={styles.list}>
-				{LOOP_LABELS.filter((l) => ISSUE_LABELS.has(l.name) === issue).map((l) => (
+				{LOOP_LABELS.filter((l) => where(l.name) === kind).map((l) => (
 					<li key={l.name} className={styles.item}>
 						<Label name={l.name} />
 						<span className={styles.desc}>{l.description}</span>
@@ -69,8 +78,9 @@ function Group({ title, issue }: { title: string; issue: boolean }): ReactNode {
 export default function LabelChips(): ReactNode {
 	return (
 		<div className={styles.grid}>
-			<Group title="On issues" issue />
-			<Group title="On pull requests" issue={false} />
+			<Group title="On issues" kind="issue" />
+			<Group title="On pull requests" kind="pr" />
+			<Group title="Priority (on issues)" kind="priority" />
 		</div>
 	)
 }

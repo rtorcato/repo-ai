@@ -34,10 +34,15 @@ argument.
    ```bash
    gh issue list -R "$R" --state open --label ai-wip       --json number,title
    gh pr    list -R "$R" --state open --json number,title,labels,autoMergeRequest,assignees
-   gh issue list -R "$R" --state open --label ai-ready     --json number,title
+   gh issue list -R "$R" --state open --label ai-ready     --json number,title,labels,createdAt
    gh issue list -R "$R" --state open --label ai-blocked   --json number,title
-   gh issue list -R "$R" --state open --label ai-suggested --json number,title
+   gh issue list -R "$R" --state open --label ai-suggested --json number,title,labels,createdAt
    ```
+
+   **List the queued and suggested issues in pickup order** (#464): `bug-p1`,
+   `fix-p1`, `bug-p2`, `fix-p2`, `bug-p3`, `fix-p3`, then everything else,
+   oldest `createdAt` first within each. Show an issue's priority label next to
+   its number, e.g. `#44 (bug-p1)`.
 
    Filter the PR list to those carrying an `ai-*` label — a PR without one is
    not in the pipeline and the loop will never touch it.
@@ -124,8 +129,8 @@ argument.
      #41  add a --json flag to doctor        PR #58  ai-review, waiting on security-expert
      #43  fix the nvmrc fallback             PR #59  ready — waiting on you to merge
 
-   Queued (ai-ready, unclaimed):  #44, #45
-   Suggested (agent triage queue): #46, #47
+   Queued (ai-ready, unclaimed):  #45 (bug-p1), #44 (fix-p2), #48
+   Suggested (agent triage queue): #47 (fix-p1), #46
    Blocked (needs a human):       #38  (3 fix rounds, gave up)
    Worktrees: 2                   (or: 1 stale — issue #40 closed)
    ```
