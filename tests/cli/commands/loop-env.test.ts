@@ -90,6 +90,17 @@ describe('resolveLoopEnv', () => {
 		expect(env).toMatchObject({ ownerRepo: 'acme/widget', humanUser: 'acme', me: 'me-bot' })
 	})
 
+	it('honours AI_LOOP_WORKTREE_ROOT, substituting {repo}', async () => {
+		const tmp = newTmpDir()
+		const root = checkout(tmp)
+		const env = await resolveLoopEnv({
+			dir: root,
+			gh: fakeGh().gh,
+			env: { AI_LOOP_WORKTREE_ROOT: '/x/WORKTREES/{repo}' },
+		})
+		expect(env.worktreeRoot).toBe('/x/WORKTREES/repo')
+	})
+
 	it('reads agentUser and keeps it when assignable', async () => {
 		const root = checkout(newTmpDir())
 		fs.writeJsonSync(join(root, '.repo-ai.json'), { agentUser: 'bot' })

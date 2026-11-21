@@ -523,7 +523,11 @@ read-only: the loop never approves, cancels or re-runs a release.
 
 Three details worth knowing because they fail *silently* when got wrong:
 
-- **Worktrees live in a sibling directory** (`<repo>-worktrees/`), never inside
+- **Worktrees live outside the repo**, by default in a sibling directory
+  (`<repo>-worktrees/`). Set `AI_LOOP_WORKTREE_ROOT` (e.g.
+  `/work/WORKTREES/{repo}`, `{repo}` becomes the checkout's directory name) to
+  put them elsewhere; `--worktree-root` still wins, and `loop cleanup`/`reap`/`guard`
+  also look in the old sibling so existing worktrees are cleaned up. Never inside
   the repo. A worktree under `.claude/worktrees/` sits on a path most repos
   exclude from their own tooling — observed on a repo whose Biome config carried
   `"!**/.claude"`, where the pre-commit hook linted *nothing* in every agent

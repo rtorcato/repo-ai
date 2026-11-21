@@ -217,9 +217,36 @@ export async function findLive(dirs: string[]): Promise<string[]> {
 	return live
 }
 
-/** The sibling layout the skill uses: `<parent>/<name>-worktrees`. */
-export function defaultWorktreeRoot(root: string): string {
+/** The env var that moves the worktree root; `{repo}` becomes the checkout's directory name. */
+export const WORKTREE_ROOT_ENV = 'AI_LOOP_WORKTREE_ROOT'
+
+/** The original sibling layout: `<parent>/<name>-worktrees`. */
+export function legacyWorktreeRoot(root: string): string {
 	return path.join(path.dirname(root), `${path.basename(root)}-worktrees`)
+}
+
+/**
+ * Where ai-* worktrees go when `--worktree-root` is not given: `$AI_LOOP_WORKTREE_ROOT`
+ * (with `{repo}` substituted, relative paths resolved against the cwd) when set,
+ * else the sibling `<root>-worktrees`.
+ */
+export function defaultWorktreeRoot(
+	root: string,
+	env: Record<string, string | undefined> = process.env
+): string {
+	const configured = env[WORKTREE_ROOT_ENV]?.trim()
+	if (!configured) return legacyWorktreeRoot(root)
+	return path.resolve(configured.replaceAll('{repo}', path.basename(root)))
+}
+
+/**
+ * Every directory that may hold live worktrees: the resolved root plus, unless
+ * the caller named one explicitly, the legacy sibling — so worktrees created
+ * before the root was configured are still found, reaped and cleaned up.
+ */
+export function worktreeScanRoots(root: string, resolved: string, explicit: boolean): string[] {
+	const legacy = legacyWorktreeRoot(root)
+	return explicit || legacy === resolved ? [resolved] : [resolved, legacy]
 }
 
 const stamp = () => new Date().toISOString().replace(/\.\d{3}Z$/, 'Z')
@@ -282,7 +309,7 @@ export async function runLoopGuard(options: LoopGuardOptions = {}): Promise<Loop
 	// A failed repair (1) is the more specific verdict, so it keeps the code.
 	if (identity === 'mismatch' && exitCode === 0) exitCode = 2
 
-	const live = await findLive([worktreeRoot])
+	const live = await findLive(worktreeScanRoots(root, worktreeRoot, Boolean(options.worktreeRoot)))
 	const rebuild = await decideRebuild({ root, removed: options.removed === true, exitCode, live })
 
 	let outcome = rebuild
