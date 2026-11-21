@@ -27,7 +27,7 @@ import { configuredAgentUser, defaultWorktreeRoot } from './loop-guard.js'
 export interface LoopEnv {
 	/** Main checkout — via `--git-common-dir`, so correct from inside a worktree. */
 	root: string
-	/** Sibling `<root>-worktrees`. */
+	/** `$AI_LOOP_WORKTREE_ROOT` (`{repo}` substituted) when set, else sibling `<root>-worktrees`. */
 	worktreeRoot: string
 	/** From the working directory's remote, never from an argument. */
 	ownerRepo: string
@@ -82,7 +82,7 @@ export async function resolveLoopEnv(options: LoopEnvOptions = {}): Promise<Loop
 	const common = (await git(['rev-parse', '--path-format=absolute', '--git-common-dir']))?.trim()
 	const root = common ? path.resolve(common, '..') : ''
 	if (!root) warnings.push('not a git repository')
-	const worktreeRoot = root ? defaultWorktreeRoot(root) : ''
+	const worktreeRoot = root ? defaultWorktreeRoot(root, env) : ''
 
 	const repo = await gh(['repo', 'view', '--json', 'nameWithOwner', '--jq', '.nameWithOwner'])
 	const ownerRepo = repo.ok ? repo.stdout.trim() : ''

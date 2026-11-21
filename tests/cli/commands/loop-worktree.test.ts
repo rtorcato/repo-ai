@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process'
 import { join } from 'node:path'
 import fs from 'fs-extra'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
 	runLoopWorktreeAdd,
 	runLoopWorktreeInstall,
@@ -167,5 +167,38 @@ describe('runLoopWorktreeInstall (#394)', () => {
 		expect((await runLoopWorktreeInstall(worktree, { root, run })).exitCode).toBe(1)
 		expect((await runLoopWorktreeInstall(`${worktree}-gone`, { root, run })).exitCode).toBe(1)
 		expect(calls).toEqual([])
+	})
+})
+
+describe('AI_LOOP_WORKTREE_ROOT', () => {
+	afterEach(() => vi.unstubAllEnvs())
+
+	it('puts the worktree under the configured root, {repo} substituted', async () => {
+		const tmp = newTmpDir()
+		const root = checkout(tmp)
+		vi.stubEnv('AI_LOOP_WORKTREE_ROOT', join(tmp, 'WORKTREES', '{repo}'))
+		const r = await runLoopWorktreeAdd('ai-9-configured', { root, base: 'main' })
+		expect(r.exitCode).toBe(0)
+		expect(r.worktree).toBe(join(tmp, 'WORKTREES', 'repo', 'ai-9-configured'))
+		expect(fs.existsSync(`${root}-worktrees`)).toBe(false)
+	})
+
+	it('keeps the <root>-worktrees default when unset or blank', async () => {
+		const root = checkout(newTmpDir())
+		vi.stubEnv('AI_LOOP_WORKTREE_ROOT', '  ')
+		const r = await runLoopWorktreeAdd('ai-9-default', { root, base: 'main' })
+		expect(r.worktree).toBe(join(`${root}-worktrees`, 'ai-9-default'))
+	})
+
+	it('--worktree-root still wins over the env var', async () => {
+		const tmp = newTmpDir()
+		const root = checkout(tmp)
+		vi.stubEnv('AI_LOOP_WORKTREE_ROOT', join(tmp, 'env'))
+		const r = await runLoopWorktreeAdd('ai-9-flag', {
+			root,
+			base: 'main',
+			worktreeRoot: join(tmp, 'flag'),
+		})
+		expect(r.worktree).toBe(join(tmp, 'flag', 'ai-9-flag'))
 	})
 })

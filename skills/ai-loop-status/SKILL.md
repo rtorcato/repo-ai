@@ -81,8 +81,10 @@ argument.
 
    ```bash
    ROOT=$(git rev-parse --path-format=absolute --git-common-dir)/..; ROOT=$(cd "$ROOT" && pwd)
-   find "$(dirname "$ROOT")/$(basename "$ROOT")-worktrees" \
-     -maxdepth 1 -name 'ai-*' -type d 2>/dev/null
+   # the resolved root ($AI_LOOP_WORKTREE_ROOT, else the sibling) plus the old sibling default
+   WT=$(npx repo-ai loop env --dir "$ROOT" --json 2>/dev/null | jq -r .worktreeRoot)
+   find "${WT:-$ROOT-worktrees}" "$ROOT-worktrees" \
+     -maxdepth 1 -name 'ai-*' -type d 2>/dev/null | sort -u
    ```
 
 5. **Check the schedule** — `/ai-loop` keeps one recurring `CronCreate` job

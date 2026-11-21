@@ -84,7 +84,7 @@ copyright is on the person who merges it.
 ## Local changes
 
 On your machine the loop creates and removes `ai-*` git worktrees and branches
-in a sibling `<repo>-worktrees/` directory, and installs or links dependencies
+in a sibling `<repo>-worktrees/` directory (or `$AI_LOOP_WORKTREE_ROOT`), and installs or links dependencies
 into them. `setup` and `fix` write to `~/.claude` (skills, statusline) and to
 the repo's config. Don't keep your own work in an `ai-*` worktree or branch.
 

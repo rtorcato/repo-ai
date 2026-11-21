@@ -6,7 +6,7 @@ import { resolveDefaultBranch } from '../../base/default-branch.js'
 import { type GhExec, realGhExec } from '../../base/gh.js'
 import { type GitExec, realGitExec } from '../../base/git.js'
 import { isYarnBerry, YARN_BERRY_ARGS } from '../../base/package-manager.js'
-import { defaultWorktreeRoot } from './loop-guard.js'
+import { defaultWorktreeRoot, worktreeScanRoots } from './loop-guard.js'
 
 /**
  * `repo-tooling loop worktree add` — the ai-loop skill's Pass 4
@@ -214,8 +214,14 @@ export async function runLoopWorktreeInstall(
 		? path.resolve(options.worktreeRoot)
 		: defaultWorktreeRoot(root)
 	const real = await fs.realpath(worktree).catch(() => '')
-	const rel = real && path.relative(await fs.realpath(worktreeRoot).catch(() => worktreeRoot), real)
-	if (!rel || rel.startsWith('..') || path.isAbsolute(rel)) {
+	const within = async (dir: string) => {
+		const rel = real && path.relative(await fs.realpath(dir).catch(() => dir), real)
+		return Boolean(rel) && !rel.startsWith('..') && !path.isAbsolute(rel)
+	}
+	const roots = worktreeScanRoots(root, worktreeRoot, Boolean(options.worktreeRoot))
+	let inside = false
+	for (const dir of roots) inside ||= await within(dir)
+	if (!inside) {
 		return { exitCode: 1, message: `⚠ ${worktree} is not a worktree under ${worktreeRoot}` }
 	}
 	if (!(await isYarnBerry(real))) {

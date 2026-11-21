@@ -2,7 +2,7 @@ import path from 'node:path'
 import chalk from 'chalk'
 import { limit, readConfig } from '../../base/config.js'
 import { type GhExec, realGhExec } from '../../base/gh.js'
-import { defaultWorktreeRoot, findLive } from './loop-guard.js'
+import { defaultWorktreeRoot, findLive, worktreeScanRoots } from './loop-guard.js'
 
 /**
  * `repo-tooling loop reap` — the ai-loop skill's Pass 2 stalled-agent
@@ -178,7 +178,7 @@ export async function runLoopReap(options: LoopReapOptions = {}): Promise<LoopRe
 		'--json',
 		'number,state,headRefName,labels',
 	])
-	const dirs = await findLive([worktreeRoot])
+	const dirs = await findLive(worktreeScanRoots(root, worktreeRoot, Boolean(options.worktreeRoot)))
 	const worktreeOf = (issue: number) =>
 		dirs.find((d) => issueOf(path.basename(d)) === issue) ?? null
 

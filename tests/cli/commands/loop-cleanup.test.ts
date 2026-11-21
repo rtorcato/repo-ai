@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process'
 import { join } from 'node:path'
 import fs from 'fs-extra'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { GhExec } from '../../../src/base/gh.js'
 import { runLoopCleanup } from '../../../src/cli/commands/loop-cleanup.js'
 import { useTmpDir } from '../../helpers/tmp-dir.js'
@@ -131,5 +131,33 @@ describe('runLoopCleanup', () => {
 		}
 		const result = await runLoopCleanup({ root, dryRun: true, gh })
 		expect(result.worktrees.map((w) => w.action)).toEqual(['kept', 'kept'])
+	})
+})
+
+describe('runLoopCleanup with AI_LOOP_WORKTREE_ROOT', () => {
+	afterEach(() => vi.unstubAllEnvs())
+
+	it('cleans worktrees under both the configured root and the old sibling default', async () => {
+		const tmp = newTmpDir()
+		const root = checkout(tmp)
+		const configured = join(tmp, 'WORKTREES', 'repo')
+		vi.stubEnv('AI_LOOP_WORKTREE_ROOT', join(tmp, 'WORKTREES', '{repo}'))
+		git(root, 'worktree', 'add', '-q', join(configured, 'ai-1-new'), '-b', 'ai-1-new')
+		git(root, 'worktree', 'add', '-q', join(`${root}-worktrees`, 'ai-2-old'), '-b', 'ai-2-old')
+		squash(root, 'feat: new (#21)')
+		squash(root, 'feat: old (#22)')
+
+		const result = await runLoopCleanup({
+			root,
+			gh: fakeGh({
+				'ai-1-new': { number: 21, state: 'MERGED' },
+				'ai-2-old': { number: 22, state: 'MERGED' },
+			}),
+		})
+
+		expect(result.worktreeRoot).toBe(configured)
+		expect(result.worktrees.map((w) => w.action)).toEqual(['removed', 'removed'])
+		expect(fs.existsSync(join(configured, 'ai-1-new'))).toBe(false)
+		expect(fs.existsSync(join(`${root}-worktrees`, 'ai-2-old'))).toBe(false)
 	})
 })

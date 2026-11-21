@@ -4,7 +4,7 @@ import chalk from 'chalk'
 import { resolveDefaultBranch } from '../../base/default-branch.js'
 import { type GitExec, realGitExec } from '../../base/git.js'
 import { type GhExec, realGhExec } from '../../base/gh.js'
-import { defaultWorktreeRoot, findLive } from './loop-guard.js'
+import { defaultWorktreeRoot, findLive, worktreeScanRoots } from './loop-guard.js'
 
 /**
  * `repo-tooling loop cleanup` — the ai-loop skill's Pass 2 worktree
@@ -97,7 +97,7 @@ export async function runLoopCleanup(options: LoopCleanupOptions = {}): Promise<
 	const git: GitExec = options.git ?? ((args) => realGitExec(args, root, 120_000))
 	const gh: GhExec = options.gh ?? ((args, stdin) => realGhExec(args, stdin, root))
 
-	const dirs = await findLive([worktreeRoot])
+	const dirs = await findLive(worktreeScanRoots(root, worktreeRoot, Boolean(options.worktreeRoot)))
 	let subjects: string[] | null = null
 	const worktrees: CleanupEntry[] = []
 

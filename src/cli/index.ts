@@ -105,7 +105,10 @@ loop
 	.command('guard')
 	.description('🛡️  Repair a wrongly-bare main checkout and gate the node_modules rebuild')
 	.option('--root <path>', 'Main checkout the loop branches worktrees from', ROOT)
-	.option('--worktree-root <path>', 'Where ai-* worktrees live (default: <root>-worktrees)')
+	.option(
+		'--worktree-root <path>',
+		'Where ai-* worktrees live (default: $AI_LOOP_WORKTREE_ROOT, else <root>-worktrees)'
+	)
 	.option('--removed', 'A worktree was removed this tick — consider rebuilding node_modules')
 	.option('--json', 'Emit machine-readable JSON output')
 	.addHelpText(
@@ -137,7 +140,10 @@ loop
 	.command('apply')
 	.description("✍️  Apply a tick's transitions (Pass 1 and 2) and take its claims (Pass 3 and 4)")
 	.option('--root <path>', 'Main checkout the loop branches worktrees from', process.cwd())
-	.option('--worktree-root <path>', 'Where ai-* worktrees live (default: <root>-worktrees)')
+	.option(
+		'--worktree-root <path>',
+		'Where ai-* worktrees live (default: $AI_LOOP_WORKTREE_ROOT, else <root>-worktrees)'
+	)
 	.option('--json', 'Emit machine-readable JSON output')
 	.option('--summary', 'Emit only the JSON fields the ai-loop skill reads (implies --json)')
 	.addHelpText(
@@ -153,7 +159,10 @@ loop
 	.command('cleanup')
 	.description('🧹 Remove ai-* worktrees whose PR landed on main or was closed')
 	.option('--root <path>', 'Main checkout the loop branches worktrees from', ROOT)
-	.option('--worktree-root <path>', 'Where ai-* worktrees live (default: <root>-worktrees)')
+	.option(
+		'--worktree-root <path>',
+		'Where ai-* worktrees live (default: $AI_LOOP_WORKTREE_ROOT, else <root>-worktrees)'
+	)
 	.option('--json', 'Emit machine-readable JSON output')
 	.addHelpText(
 		'after',
@@ -170,7 +179,10 @@ worktree
 		"🌱 Create ai-<issue>-<slug> off the repo's default branch, link its deps, assert none are missing"
 	)
 	.option('--root <path>', 'Main checkout to branch the worktree from', ROOT)
-	.option('--worktree-root <path>', 'Where ai-* worktrees live (default: <root>-worktrees)')
+	.option(
+		'--worktree-root <path>',
+		'Where ai-* worktrees live (default: $AI_LOOP_WORKTREE_ROOT, else <root>-worktrees)'
+	)
 	.option('--base <ref>', "Ref to branch from (default: origin/<the repo's default branch>)")
 	.option('--json', 'Emit machine-readable JSON output')
 	.addHelpText(
@@ -184,7 +196,10 @@ worktree
 	.command('install <worktree>')
 	.description('📦 Run the Yarn 2+ install with the worktree as its working directory')
 	.option('--root <path>', 'Main checkout the worktree belongs to', ROOT)
-	.option('--worktree-root <path>', 'Where ai-* worktrees live (default: <root>-worktrees)')
+	.option(
+		'--worktree-root <path>',
+		'Where ai-* worktrees live (default: $AI_LOOP_WORKTREE_ROOT, else <root>-worktrees)'
+	)
 	.addHelpText(
 		'after',
 		'\nYarn 3 rejects a leading --cwd and Yarn 4 a trailing one, so the tick runs this\n' +
@@ -196,7 +211,10 @@ loop
 	.command('reap')
 	.description('🪦 Report agents stalled past 45 minutes and what to do about each')
 	.option('--root <path>', 'Main checkout the loop branches worktrees from', ROOT)
-	.option('--worktree-root <path>', 'Where ai-* worktrees live (default: <root>-worktrees)')
+	.option(
+		'--worktree-root <path>',
+		'Where ai-* worktrees live (default: $AI_LOOP_WORKTREE_ROOT, else <root>-worktrees)'
+	)
 	.option('--json', 'Emit machine-readable JSON output')
 	.addHelpText(
 		'after',
